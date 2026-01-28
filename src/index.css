@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+/* Optional base styles to make the full height work well */
+@layer base {
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+}
