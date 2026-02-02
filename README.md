@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # CodeIR: Intermediate Representation Visualization Platform
 
 ## Overview
@@ -17,6 +18,28 @@ graph TD
     User[User Browser] -->|HTTPS| CDN[Vite Content]
     User -->|WSS/HTTPS| SB[Supabase API]
 
+=======
+
+# CodeIR: Intermediate Representation Visualization Platform
+
+## Overview
+
+**CodeIR** is a full-stack educational web application designed to bridge the gap between high-level source code and compiler Intermediate Representations (IR). It features a sophisticated dual-role architecture (Student/Instructor) enabling real-time code submission, IR visualization, and rubric-based evaluation.
+
+The system leverages a **Serverless Architecture** via Supabase, employing strictly typed **TypeScript** interfaces on the frontend to ensure type safety across the full stack.
+
+---
+
+## System Architecture
+
+The application follows a **Single Page Application (SPA)** architecture served via Vite, utilizing a "Gatekeeper" pattern for authentication state management.
+
+```mermaid
+graph TD
+    User[User Browser] -->|HTTPS| CDN[Vite Content]
+    User -->|WSS/HTTPS| SB[Supabase API]
+    
+>>>>>>> 66ffbe0761458117d069e49548bdba12a0d69288
     subgraph Frontend [React Client]
         Auth[Auth Gatekeeper]
         Auth -->|Role: Student| Editor[Monaco Code Editor]
@@ -24,6 +47,7 @@ graph TD
         Editor -->|State| LocalState[React State]
         Eval -->|State| LocalState
     end
+<<<<<<< HEAD
 
     subgraph Backend [Supabase PaaS]
         AuthService[GoTrue Auth]
@@ -36,6 +60,20 @@ graph TD
     SB --> DB
     DB --> RLS
 
+=======
+    
+    subgraph Backend [Supabase PaaS]
+        AuthService[GoTrue Auth]
+        DB[(PostgreSQL)]
+        RLS[Row Level Security]
+        Realtime[Realtime Engine]
+    end
+
+    SB --> AuthService
+    SB --> DB
+    DB --> RLS
+
+>>>>>>> 66ffbe0761458117d069e49548bdba12a0d69288
 ```
 
 ### Key Technical Decisions
@@ -50,6 +88,7 @@ graph TD
 
 ### Frontend Core
 
+<<<<<<< HEAD
 - **Framework:** React 18 (Functional Components, Hooks)
 - **Language:** TypeScript (Strict Mode)
 - **Build Tool:** Vite (ESBuild based)
@@ -66,6 +105,24 @@ graph TD
 - **Database:** PostgreSQL 15+
 - **Auth:** Supabase Auth (JWT based)
 - **API:** PostgREST (Auto-generated REST API from Schema)
+=======
+* **Framework:** React 18 (Functional Components, Hooks)
+* **Language:** TypeScript (Strict Mode)
+* **Build Tool:** Vite (ESBuild based)
+* **Styling:** Tailwind CSS v4, Lucide React (Iconography)
+
+### Editor & Visualization
+
+* **Editor Engine:** Monaco Editor (VS Code core)
+* **State Management:** React Context API + Local State (optimized to prevent prop drilling)
+
+### Backend & Database
+
+* **BaaS:** Supabase
+* **Database:** PostgreSQL 15+
+* **Auth:** Supabase Auth (JWT based)
+* **API:** PostgREST (Auto-generated REST API from Schema)
+>>>>>>> 66ffbe0761458117d069e49548bdba12a0d69288
 
 ---
 
@@ -77,6 +134,7 @@ The data layer consists of relational tables with strict Foreign Key constraints
 
 Stores student code attempts.
 
+<<<<<<< HEAD
 | Column        | Type          | Constraints                       | Description                           |
 | ------------- | ------------- | --------------------------------- | ------------------------------------- |
 | `id`          | `uuid`        | `PK`, `DEFAULT gen_random_uuid()` | Unique Submission ID                  |
@@ -87,11 +145,24 @@ Stores student code attempts.
 | `ir_output`   | `text`        |                                   | Generated Intermediate Representation |
 | `status`      | `text`        | `DEFAULT 'draft'`                 | Workflow status                       |
 | `created_at`  | `timestamptz` | `DEFAULT now()`                   | Timestamp                             |
+=======
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | `uuid` | `PK`, `DEFAULT gen_random_uuid()` | Unique Submission ID |
+| `user_id` | `uuid` | `FK -> auth.users.id`, `NOT NULL` | The student author |
+| `source_code` | `text` |  | Raw source code content |
+| `description` | `text` |  | Student's problem statement |
+| `language` | `text` | `DEFAULT 'javascript'` | Target language |
+| `ir_output` | `text` |  | Generated Intermediate Representation |
+| `status` | `text` | `DEFAULT 'draft'` | Workflow status |
+| `created_at` | `timestamptz` | `DEFAULT now()` | Timestamp |
+>>>>>>> 66ffbe0761458117d069e49548bdba12a0d69288
 
 ### 2. `public.evaluations`
 
 Stores instructor feedback and rubric scores.
 
+<<<<<<< HEAD
 | Column          | Type    | Constraints                       | Description                                |
 | --------------- | ------- | --------------------------------- | ------------------------------------------ |
 | `id`            | `uuid`  | `PK`, `DEFAULT gen_random_uuid()` | Unique Evaluation ID                       |
@@ -99,6 +170,15 @@ Stores instructor feedback and rubric scores.
 | `instructor_id` | `uuid`  | `FK -> auth.users.id`             | The evaluator                              |
 | `rubric_scores` | `jsonb` | `DEFAULT '{}'`                    | Structured scoring (JSONB for flexibility) |
 | `feedback`      | `text`  |                                   | Qualitative feedback                       |
+=======
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | `uuid` | `PK`, `DEFAULT gen_random_uuid()` | Unique Evaluation ID |
+| `submission_id` | `uuid` | `FK -> submissions.id`, `UNIQUE` | 1:1 Link to submission |
+| `instructor_id` | `uuid` | `FK -> auth.users.id` | The evaluator |
+| `rubric_scores` | `jsonb` | `DEFAULT '{}'` | Structured scoring (JSONB for flexibility) |
+| `feedback` | `text` |  | Qualitative feedback |
+>>>>>>> 66ffbe0761458117d069e49548bdba12a0d69288
 
 ---
 
@@ -109,16 +189,26 @@ Security is enforced at the Postgres level.
 **1. Submission Isolation:**
 
 ```sql
+<<<<<<< HEAD
 CREATE POLICY "Users can see own submissions"
 ON submissions FOR SELECT
+=======
+CREATE POLICY "Users can see own submissions" 
+ON submissions FOR SELECT 
+>>>>>>> 66ffbe0761458117d069e49548bdba12a0d69288
 USING (auth.uid() = user_id);
 
 ```
 
 **2. Data Integrity:**
 
+<<<<<<< HEAD
 - `ON DELETE CASCADE` is implemented on `submissions`. If a user is deleted, their code attempts vanish.
 - `ON DELETE CASCADE` is implemented on `evaluations`. If a submission is deleted, its grade vanishes.
+=======
+* `ON DELETE CASCADE` is implemented on `submissions`. If a user is deleted, their code attempts vanish.
+* `ON DELETE CASCADE` is implemented on `evaluations`. If a submission is deleted, its grade vanishes.
+>>>>>>> 66ffbe0761458117d069e49548bdba12a0d69288
 
 ---
 
@@ -151,9 +241,15 @@ codeir/
 
 ### Prerequisites
 
+<<<<<<< HEAD
 - Node.js v16+
 - npm or yarn
 - A Supabase Project
+=======
+* Node.js v16+
+* npm or yarn
+* A Supabase Project
+>>>>>>> 66ffbe0761458117d069e49548bdba12a0d69288
 
 ### Step 1: Clone & Install
 
@@ -229,16 +325,27 @@ npm run dev
 
 The application determines the UI to render based on user metadata:
 
+<<<<<<< HEAD
 - **Student:** Accesses `CodeEditor.tsx`. Can write code, view mock IR generation, and submit.
 - **Instructor:** Accesses `InstructorEvaluation.tsx`. Can view student code (read-only/writeable depending on mode), view IR, and input rubric scores/feedback.
+=======
+* **Student:** Accesses `CodeEditor.tsx`. Can write code, view mock IR generation, and submit.
+* **Instructor:** Accesses `InstructorEvaluation.tsx`. Can view student code (read-only/writeable depending on mode), view IR, and input rubric scores/feedback.
+>>>>>>> 66ffbe0761458117d069e49548bdba12a0d69288
 
 ### Sandbox Mode
 
 If the Instructor view is loaded without a database connection or valid student submission, the system gracefully degrades into **Sandbox Mode**.
 
+<<<<<<< HEAD
 - **Behavior:** The editor becomes writable for manual testing.
 - **Visual Cue:** A yellow "Sandbox Mode" badge appears in the header.
 - **Submission:** Saving is disabled/mocked to prevent foreign key constraint violations.
+=======
+* **Behavior:** The editor becomes writable for manual testing.
+* **Visual Cue:** A yellow "Sandbox Mode" badge appears in the header.
+* **Submission:** Saving is disabled/mocked to prevent foreign key constraint violations.
+>>>>>>> 66ffbe0761458117d069e49548bdba12a0d69288
 
 ---
 
