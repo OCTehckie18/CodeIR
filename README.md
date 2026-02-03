@@ -16,7 +16,7 @@ The application follows a **Single Page Application (SPA)** architecture served 
 graph TD
     User[User Browser] -->|HTTPS| CDN[Vite Content]
     User -->|WSS/HTTPS| SB[Supabase API]
-    
+
     subgraph Frontend [React Client]
         Auth[Auth Gatekeeper]
         Auth -->|Role: Student| Editor[Monaco Code Editor]
@@ -24,7 +24,7 @@ graph TD
         Editor -->|State| LocalState[React State]
         Eval -->|State| LocalState
     end
-    
+
     subgraph Backend [Supabase PaaS]
         AuthService[GoTrue Auth]
         DB[(PostgreSQL)]
@@ -50,22 +50,22 @@ graph TD
 
 ### Frontend Core
 
-* **Framework:** React 18 (Functional Components, Hooks)
-* **Language:** TypeScript (Strict Mode)
-* **Build Tool:** Vite (ESBuild based)
-* **Styling:** Tailwind CSS v4, Lucide React (Iconography)
+- **Framework:** React 18 (Functional Components, Hooks)
+- **Language:** TypeScript (Strict Mode)
+- **Build Tool:** Vite (ESBuild based)
+- **Styling:** Tailwind CSS v4, Lucide React (Iconography)
 
 ### Editor & Visualization
 
-* **Editor Engine:** Monaco Editor (VS Code core)
-* **State Management:** React Context API + Local State (optimized to prevent prop drilling)
+- **Editor Engine:** Monaco Editor (VS Code core)
+- **State Management:** React Context API + Local State (optimized to prevent prop drilling)
 
 ### Backend & Database
 
-* **BaaS:** Supabase
-* **Database:** PostgreSQL 15+
-* **Auth:** Supabase Auth (JWT based)
-* **API:** PostgREST (Auto-generated REST API from Schema)
+- **BaaS:** Supabase
+- **Database:** PostgreSQL 15+
+- **Auth:** Supabase Auth (JWT based)
+- **API:** PostgREST (Auto-generated REST API from Schema)
 
 ---
 
@@ -77,28 +77,28 @@ The data layer consists of relational tables with strict Foreign Key constraints
 
 Stores student code attempts.
 
-| Column | Type | Constraints | Description |
-| --- | --- | --- | --- |
-| `id` | `uuid` | `PK`, `DEFAULT gen_random_uuid()` | Unique Submission ID |
-| `user_id` | `uuid` | `FK -> auth.users.id`, `NOT NULL` | The student author |
-| `source_code` | `text` |  | Raw source code content |
-| `description` | `text` |  | Student's problem statement |
-| `language` | `text` | `DEFAULT 'javascript'` | Target language |
-| `ir_output` | `text` |  | Generated Intermediate Representation |
-| `status` | `text` | `DEFAULT 'draft'` | Workflow status |
-| `created_at` | `timestamptz` | `DEFAULT now()` | Timestamp |
+| Column        | Type          | Constraints                       | Description                           |
+| ------------- | ------------- | --------------------------------- | ------------------------------------- |
+| `id`          | `uuid`        | `PK`, `DEFAULT gen_random_uuid()` | Unique Submission ID                  |
+| `user_id`     | `uuid`        | `FK -> auth.users.id`, `NOT NULL` | The student author                    |
+| `source_code` | `text`        |                                   | Raw source code content               |
+| `description` | `text`        |                                   | Student's problem statement           |
+| `language`    | `text`        | `DEFAULT 'javascript'`            | Target language                       |
+| `ir_output`   | `text`        |                                   | Generated Intermediate Representation |
+| `status`      | `text`        | `DEFAULT 'draft'`                 | Workflow status                       |
+| `created_at`  | `timestamptz` | `DEFAULT now()`                   | Timestamp                             |
 
 ### 2. `public.evaluations`
 
 Stores instructor feedback and rubric scores.
 
-| Column | Type | Constraints | Description |
-| --- | --- | --- | --- |
-| `id` | `uuid` | `PK`, `DEFAULT gen_random_uuid()` | Unique Evaluation ID |
-| `submission_id` | `uuid` | `FK -> submissions.id`, `UNIQUE` | 1:1 Link to submission |
-| `instructor_id` | `uuid` | `FK -> auth.users.id` | The evaluator |
-| `rubric_scores` | `jsonb` | `DEFAULT '{}'` | Structured scoring (JSONB for flexibility) |
-| `feedback` | `text` |  | Qualitative feedback |
+| Column          | Type    | Constraints                       | Description                                |
+| --------------- | ------- | --------------------------------- | ------------------------------------------ |
+| `id`            | `uuid`  | `PK`, `DEFAULT gen_random_uuid()` | Unique Evaluation ID                       |
+| `submission_id` | `uuid`  | `FK -> submissions.id`, `UNIQUE`  | 1:1 Link to submission                     |
+| `instructor_id` | `uuid`  | `FK -> auth.users.id`             | The evaluator                              |
+| `rubric_scores` | `jsonb` | `DEFAULT '{}'`                    | Structured scoring (JSONB for flexibility) |
+| `feedback`      | `text`  |                                   | Qualitative feedback                       |
 
 ---
 
@@ -109,16 +109,16 @@ Security is enforced at the Postgres level.
 **1. Submission Isolation:**
 
 ```sql
-CREATE POLICY "Users can see own submissions" 
-ON submissions FOR SELECT 
+CREATE POLICY "Users can see own submissions"
+ON submissions FOR SELECT
 USING (auth.uid() = user_id);
 
 ```
 
 **2. Data Integrity:**
 
-* `ON DELETE CASCADE` is implemented on `submissions`. If a user is deleted, their code attempts vanish.
-* `ON DELETE CASCADE` is implemented on `evaluations`. If a submission is deleted, its grade vanishes.
+- `ON DELETE CASCADE` is implemented on `submissions`. If a user is deleted, their code attempts vanish.
+- `ON DELETE CASCADE` is implemented on `evaluations`. If a submission is deleted, its grade vanishes.
 
 ---
 
@@ -151,9 +151,9 @@ codeir/
 
 ### Prerequisites
 
-* Node.js v16+
-* npm or yarn
-* A Supabase Project
+- Node.js v16+
+- npm or yarn
+- A Supabase Project
 
 ### Step 1: Clone & Install
 
@@ -229,25 +229,19 @@ npm run dev
 
 The application determines the UI to render based on user metadata:
 
-* **Student:** Accesses `CodeEditor.tsx`. Can write code, view mock IR generation, and submit.
-* **Instructor:** Accesses `InstructorEvaluation.tsx`. Can view student code (read-only/writeable depending on mode), view IR, and input rubric scores/feedback.
+- **Student:** Accesses `CodeEditor.tsx`. Can write code, view mock IR generation, and submit.
+- **Instructor:** Accesses `InstructorEvaluation.tsx`. Can view student code (read-only/writeable depending on mode), view IR, and input rubric scores/feedback.
 
 ### Sandbox Mode
 
 If the Instructor view is loaded without a database connection or valid student submission, the system gracefully degrades into **Sandbox Mode**.
 
-* **Behavior:** The editor becomes writable for manual testing.
-* **Visual Cue:** A yellow "Sandbox Mode" badge appears in the header.
-* **Submission:** Saving is disabled/mocked to prevent foreign key constraint violations.
+- **Behavior:** The editor becomes writable for manual testing.
+- **Visual Cue:** A yellow "Sandbox Mode" badge appears in the header.
+- **Submission:** Saving is disabled/mocked to prevent foreign key constraint violations.
 
 ---
 
 ## License
 
-Distributed under the MIT License.
-
 **Academic Use Only** | CodeIR Architecture Team
-
-```
-
-```
