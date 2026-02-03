@@ -124,9 +124,16 @@ export default function AuthForm() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950 lg:hidden pointer-events-none" />
 
         <div className="relative z-10 w-full max-w-[380px] space-y-8">
-          <div className="flex justify-center mb-8 sm:mb-12">
-            <div className="animate-fade-in-up">
-              <p className="mt-4 text-lg xl:text-xl tracking-[0.2em] text-slate-300 font-light uppercase">
+          <div className="flex flex-col items-center justify-center mb-8 sm:mb-12">
+            {/* RESPONSIVE LOGO: Shows only on mobile/tablet (hidden on lg+) */}
+            <img
+              src={logo}
+              alt="CodeIR Logo"
+              className="lg:hidden h-full w-full object-contain mb-6 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] animate-fade-in"
+            />
+
+            <div className="animate-fade-in-up text-center">
+              <p className="text-lg xl:text-xl tracking-[0.2em] text-slate-300 font-light uppercase">
                 {mode === "login" ? "Welcome Back" : "Create Account"}
               </p>
             </div>
