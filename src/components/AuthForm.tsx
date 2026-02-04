@@ -245,7 +245,7 @@ export default function AuthForm() {
 
           <div className="pt-6 text-center">
             <p className="text-slate-600 text-xs font-medium uppercase tracking-widest">
-              *Academic use only
+              *In Development Phase
             </p>
           </div>
         </div>
