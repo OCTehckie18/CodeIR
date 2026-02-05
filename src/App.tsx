@@ -2,23 +2,27 @@ import { useState, useEffect } from "react";
 import { supabase } from "./lib/supabaseClient";
 import AuthForm from "./components/AuthForm";
 import CodeEditor from "./components/CodeEditor";
-import InstructorEvaluation from "./components/InstructorEvaluation"; // Import the new component
+import InstructorEvaluation from "./components/InstructorEvaluation";
+import StudentDashboard from "./components/StudentDashboard";
 import { Loader2 } from "lucide-react";
 
 function App() {
   const [session, setSession] = useState<any>(null);
-  const [role, setRole] = useState<string | null>(null); // New state for role
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // View state: 'dashboard' or 'editor'
+  const [currentView, setCurrentView] = useState<"editor" | "dashboard">(
+    "dashboard",
+  );
+
   useEffect(() => {
-    // Check session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) fetchRole(session.user.id);
       else setLoading(false);
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -33,19 +37,13 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Helper to get role from user_metadata (which you set during signup)
   const fetchRole = async (userId: string) => {
-    // 1. Try fetching from metadata first (fastest)
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (user?.user_metadata?.role) {
       setRole(user.user_metadata.role);
     }
-    // 2. Fallback: If you store role in a 'profiles' table, fetch it here
-    // const { data } = await supabase.from('profiles').select('role').eq('id', userId).single();
-    // if (data) setRole(data.role);
-
     setLoading(false);
   };
 
@@ -57,15 +55,27 @@ function App() {
     );
   }
 
-  // === ROUTING LOGIC ===
   if (!session) return <AuthForm />;
 
-  // Route based on Role
   if (role === "instructor") {
     return <InstructorEvaluation />;
   }
 
-  return <CodeEditor />;
+  // === STUDENT ROUTING ===
+  const handleNavigate = (page: string) => {
+    setCurrentView(page as "editor" | "dashboard");
+  };
+
+  return (
+    <div>
+      {currentView === "dashboard" ? (
+        <StudentDashboard onNavigate={handleNavigate} />
+      ) : (
+        // FIX: Pass the navigation function here too!
+        <CodeEditor onNavigate={handleNavigate} />
+      )}
+    </div>
+  );
 }
 
 export default App;

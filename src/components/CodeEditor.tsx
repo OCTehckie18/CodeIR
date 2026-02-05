@@ -9,17 +9,22 @@ import {
   Play,
   Save,
   LayoutDashboard,
-  LogOut, // <--- Ensure LogOut is imported here
+  LogOut,
   CheckCircle2,
   AlertCircle,
   Loader2,
 } from "lucide-react";
 
-export default function CodeEditor() {
-  // --- 1. INSERT THE LOGOUT FUNCTION HERE (Inside the component, before return) ---
+// Define props interface
+interface CodeEditorProps {
+  onNavigate?: (page: "dashboard" | "editor") => void;
+}
+
+export default function CodeEditor({ onNavigate }: CodeEditorProps) {
+  // --- LOGOUT FUNCTION ---
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    // The App.tsx listener will automatically switch you back to AuthForm!
+    // The App.tsx listener will automatically switch you back to AuthForm
   };
 
   // State Management
@@ -89,11 +94,19 @@ export default function CodeEditor() {
       {/* ================= HEADER ================= */}
       <header className="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md z-50">
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 text-red-400 hover:text-red-300 cursor-pointer transition-colors">
+          {/* --- DASHBOARD NAVIGATION --- */}
+          {/* Added onClick to navigate back to dashboard */}
+          <div
+            onClick={() => onNavigate?.("dashboard")}
+            className="flex items-center gap-2 text-slate-400 hover:text-red-400 cursor-pointer transition-colors"
+          >
             <LayoutDashboard size={20} />
             <span className="font-bold tracking-wide">DASHBOARD</span>
           </div>
+
           <div className="h-6 w-px bg-slate-700"></div>
+
+          {/* --- ACTIVE EDITOR TAB --- */}
           <div className="flex items-center gap-2 text-cyan-400 cursor-default">
             <CodeIcon size={20} />
             <span className="font-bold tracking-wide border-b-2 border-cyan-400 pb-0.5">
@@ -102,7 +115,7 @@ export default function CodeEditor() {
           </div>
         </div>
 
-        {/* --- 2. REPLACE THE OLD USER PROFILE DIV WITH THIS NEW BLOCK --- */}
+        {/* --- USER PROFILE --- */}
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
             <p className="text-xs text-slate-400">Logged in as</p>
@@ -115,14 +128,12 @@ export default function CodeEditor() {
             className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 border border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:scale-105 transition-transform flex items-center justify-center group"
             title="Sign Out"
           >
-            {/* The Icon appears on hover due to opacity classes */}
             <LogOut
               size={16}
               className="text-white opacity-0 group-hover:opacity-100 transition-opacity absolute"
             />
           </button>
         </div>
-        {/* ------------------------------------------------------------- */}
       </header>
 
       {/* ================= MAIN GRID LAYOUT ================= */}
