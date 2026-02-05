@@ -129,8 +129,34 @@ export default function AuthForm() {
             <img
               src={logo}
               alt="CodeIR Logo"
-              className="lg:hidden h-full w-full object-contain mb-6 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] animate-fade-in"
+              className="lg:hidden h-full w-auto object-contain mb-6 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] animate-fade-in"
             />
+
+            {/* code for Ui element */}
+            {/* RESPONSIVE ICONS ROW: Visible ONLY on mobile (lg:hidden) */}
+            <div className="flex justify-center gap-6 mb-10 lg:hidden animate-fade-in w-full px-4">
+              {[
+                { Icon: Code, glow: "top" },
+                { Icon: Settings, glow: "middle" },
+                { Icon: Atom, glow: "bottom" },
+              ].map((Item, idx) => (
+                <div
+                  key={idx}
+                  // Outer container: Border, shadow, and lift effect on hover
+                  className="group relative flex items-center justify-center p-2 rounded-xl border border-cyan-500/30 bg-slate-900/40 backdrop-blur-md shadow-[0_0_15px_rgba(6,182,212,0.1)] transition-all duration-300 hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:border-cyan-400/60 hover:-translate-y-2"
+                >
+                  {/* Inner container: Icon and background color change on hover */}
+                  <div className="p-3 bg-white/10 rounded-lg group-hover:bg-white/20 transition-colors">
+                    <Item.Icon className="w-7 h-7 text-cyan-400" />
+                  </div>
+
+                  {/* Top Glow Line Effect */}
+                  <div className="absolute top-[-1px] left-1/2 -translate-x-1/2 w-3/5 h-[2px] bg-cyan-400 rounded-full blur-[2px] shadow-[0_0_15px_cyan] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                </div>
+              ))}
+            </div>
+
+            {/* ... Followed by your "Welcome Back" text ... */}
 
             <div className="animate-fade-in-up text-center">
               <p className="text-lg xl:text-xl tracking-[0.2em] text-slate-300 font-light uppercase">
