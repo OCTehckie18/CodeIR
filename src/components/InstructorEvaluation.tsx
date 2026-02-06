@@ -15,7 +15,16 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-export default function InstructorEvaluation() {
+// 1. Define the Props Interface ensuring onBack is required
+interface InstructorEvaluationProps {
+  submissionId?: string;
+  onBack: () => void;
+}
+
+export default function InstructorEvaluation({
+  submissionId,
+  onBack,
+}: InstructorEvaluationProps) {
   const [loading, setLoading] = useState(false);
   const [submission, setSubmission] = useState<any>(null);
 
@@ -35,7 +44,7 @@ export default function InstructorEvaluation() {
   });
   const [user, setUser] = useState<any>(null);
 
-  // --- Fetch User & Latest Submission ---
+  // --- Fetch User & Specific Submission ---
   useEffect(() => {
     const init = async () => {
       const {
@@ -43,34 +52,37 @@ export default function InstructorEvaluation() {
       } = await supabase.auth.getSession();
       setUser(session?.user || null);
 
-      // Attempt to fetch latest submission, but don't block UI if none found
-      const { data } = await supabase
-        .from("submissions")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+      if (submissionId) {
+        // FETCH SPECIFIC SUBMISSION BASED ON ID
+        const { data, error } = await supabase
+          .from("submissions")
+          .select("*")
+          .eq("id", submissionId)
+          .single();
 
-      if (data) {
-        setSubmission(data);
-        setCode(data.source_code); // Load student code into editor
-        if (data.ir_output) setIrView(data.ir_output);
+        if (data && !error) {
+          setSubmission(data);
+          setCode(data.source_code || "");
+          if (data.ir_output) setIrView(data.ir_output);
+        } else {
+          console.error("Error fetching submission:", error);
+        }
       } else {
-        // No submission found? Clear the placeholder
+        // Sandbox Mode (No ID passed)
+        setSubmission(null);
         setCode(
-          "// No active submissions found.\n// You can write or paste code here to test the rubric.",
+          "// Sandbox Mode.\n// No specific student submission selected.\n// You can write code here to test.",
         );
       }
     };
     init();
-  }, []);
+  }, [submissionId]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
 
   const handleAISuggestion = () => {
-    // Mock AI Grading Logic
     setScores({ correctness: 9, efficiency: 8, style: 7 });
     setFeedback(
       "The code logic is sound and handles edge cases well. However, the IR generation step could be optimized by reducing redundant nodes.",
@@ -80,8 +92,6 @@ export default function InstructorEvaluation() {
   const handleSubmitEvaluation = async () => {
     if (!user) return;
 
-    // If we are in "Sandbox Mode" (no linked student submission), we can't save to DB
-    // because the foreign key constraint requires a submission ID.
     if (!submission) {
       alert(
         "Sandbox Mode: Evaluation generated but not saved (No student submission linked).",
@@ -92,12 +102,15 @@ export default function InstructorEvaluation() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from("evaluations").insert({
-        submission_id: submission.id,
-        instructor_id: user.id,
-        rubric_scores: scores,
-        feedback: feedback,
-      });
+      const { error } = await supabase.from("evaluations").upsert(
+        {
+          submission_id: submission.id,
+          instructor_id: user.id,
+          rubric_scores: scores,
+          feedback: feedback,
+        },
+        { onConflict: "submission_id" },
+      );
 
       if (error) throw error;
       alert("Evaluation saved successfully!");
@@ -113,11 +126,20 @@ export default function InstructorEvaluation() {
       {/* ================= HEADER ================= */}
       <header className="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md z-50">
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 text-red-400 cursor-pointer hover:text-red-300 transition-colors">
+          {/* --- NAVIGATION: DASHBOARD LINK --- */}
+          {/* Changed to DIV to match Student Dashboard behavior exactly */}
+          <div
+            onClick={onBack}
+            className="flex items-center gap-2 text-red-400 hover:text-red-300 cursor-pointer transition-colors select-none"
+            role="button"
+            tabIndex={0}
+          >
             <LayoutDashboard size={20} />
             <span className="font-bold tracking-wide">DASHBOARD</span>
           </div>
+
           <div className="h-6 w-px bg-slate-700"></div>
+
           <div className="flex items-center gap-2 text-emerald-400 cursor-default">
             <ClipboardCheck size={20} />
             <span className="font-bold tracking-wide border-b-2 border-emerald-400 pb-0.5">
@@ -155,9 +177,9 @@ export default function InstructorEvaluation() {
         </div>
       </header>
 
-      {/* ================= MAIN 3-COLUMN LAYOUT ================= */}
+      {/* ================= MAIN CONTENT ================= */}
       <div className="flex-1 p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-y-auto lg:overflow-hidden">
-        {/* === COLUMN 1: STUDENT CODE (Blue Theme) === */}
+        {/* COLUMN 1: CODE EDITOR */}
         <div className="lg:col-span-4 flex flex-col h-full rounded-xl border border-blue-500/30 bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(59,130,246,0.1)]">
           <div className="px-4 py-3 bg-blue-900/20 border-b border-blue-500/20 flex justify-between items-center">
             <span className="text-sm font-semibold text-blue-300 flex items-center gap-2">
@@ -173,16 +195,14 @@ export default function InstructorEvaluation() {
               defaultLanguage="python"
               language={submission?.language || "python"}
               theme="vs-dark"
-              // CHANGED: Bound to local state so instructor can edit
               value={code}
               onChange={(val) => setCode(val || "")}
-              // CHANGED: Removed readOnly so it is editable
               options={{ minimap: { enabled: false }, fontSize: 13 }}
             />
           </div>
         </div>
 
-        {/* === COLUMN 2: STRUCTURED IR VIEW (Yellow Theme) === */}
+        {/* COLUMN 2: IR VIEW */}
         <div className="lg:col-span-4 flex flex-col h-full rounded-xl border border-yellow-500/30 bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(234,179,8,0.1)]">
           <div className="px-4 py-3 bg-yellow-900/20 border-b border-yellow-500/20 flex justify-between items-center">
             <span className="text-sm font-semibold text-yellow-300 flex items-center gap-2">
@@ -190,7 +210,6 @@ export default function InstructorEvaluation() {
             </span>
           </div>
           <div className="flex-1 p-4 overflow-auto custom-scrollbar">
-            {/* Using a pre/textarea hybrid so they can verify/edit IR if needed */}
             <textarea
               className="w-full h-full bg-transparent resize-none focus:outline-none text-xs text-yellow-100/80 font-mono"
               value={irView}
@@ -199,9 +218,8 @@ export default function InstructorEvaluation() {
           </div>
         </div>
 
-        {/* === COLUMN 3: EVALUATION RUBRIC & FEEDBACK (Pink & Green) === */}
+        {/* COLUMN 3: RUBRIC */}
         <div className="lg:col-span-4 flex flex-col gap-4 h-full">
-          {/* Top: Rubric (Pink Theme) */}
           <div className="flex-[3] flex flex-col rounded-xl border border-pink-500/30 bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(236,72,153,0.1)]">
             <div className="px-4 py-3 bg-pink-900/20 border-b border-pink-500/20 flex justify-between items-center">
               <span className="text-sm font-semibold text-pink-300 flex items-center gap-2">
@@ -291,7 +309,6 @@ export default function InstructorEvaluation() {
             </div>
           </div>
 
-          {/* Bottom: Feedback (Green Theme) */}
           <div className="flex-[2] flex flex-col rounded-xl border border-emerald-500/30 bg-emerald-900/5 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(16,185,129,0.1)] relative group">
             <div className="px-4 py-2 bg-emerald-900/20 border-b border-emerald-500/20">
               <span className="text-sm font-semibold text-emerald-300 flex items-center gap-2">
@@ -309,12 +326,12 @@ export default function InstructorEvaluation() {
                 onClick={handleSubmitEvaluation}
                 disabled={loading}
                 className={`w-full py-2 font-bold rounded shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all
-                   ${
-                     submission
-                       ? "bg-emerald-500 hover:bg-emerald-400 text-slate-900"
-                       : "bg-slate-700 text-slate-400 cursor-not-allowed hover:bg-slate-600"
-                   }
-                 `}
+                  ${
+                    submission
+                      ? "bg-emerald-500 hover:bg-emerald-400 text-slate-900"
+                      : "bg-slate-700 text-slate-400 cursor-not-allowed hover:bg-slate-600"
+                  }
+                `}
               >
                 {loading ? (
                   <Loader2 className="animate-spin h-4 w-4" />

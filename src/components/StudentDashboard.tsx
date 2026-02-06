@@ -155,7 +155,7 @@ export default function StudentDashboard({
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-white font-sans overflow-hidden">
       {/* HEADER */}
-      <header className="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md z-50">
+      <header className="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md z-50">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 text-red-400 cursor-default border-b-2 border-red-400 pb-0.5">
             <LayoutDashboard size={20} />
@@ -186,7 +186,8 @@ export default function StudentDashboard({
 
       <div className="flex-1 flex overflow-hidden">
         {/* LEFT PANEL (Profile) */}
-        <div className="w-1/4 min-w-[280px] bg-slate-900/50 border-r border-slate-800 p-6 flex flex-col gap-6 overflow-y-auto">
+        <div className="hidden lg:flex w-1/4 min-w-[280px] bg-slate-900/50 border-r border-slate-800 p-6 flex-col gap-6 overflow-y-auto">
+          {" "}
           <div className="flex flex-col items-center text-center pt-4">
             <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 p-1 shadow-[0_0_20px_rgba(59,130,246,0.5)]">
               <div className="h-full w-full rounded-full bg-slate-950 flex items-center justify-center">
@@ -200,7 +201,6 @@ export default function StudentDashboard({
               Computer Science • Year 2
             </p>
           </div>
-
           <div className="space-y-3 mt-4">
             <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center justify-between">
               <div>
@@ -230,6 +230,40 @@ export default function StudentDashboard({
 
         {/* RIGHT PANEL */}
         <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="grid grid-cols-2 gap-4 p-6 pb-0 lg:hidden">
+            <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center justify-between shadow-lg">
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                  Solved
+                </p>
+                <p className="text-2xl font-bold text-white">
+                  {stats.totalSolved}
+                </p>
+              </div>
+              <Trophy
+                size={24}
+                className="text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]"
+              />
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center justify-between shadow-lg">
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                  Streak
+                </p>
+                <p className="text-2xl font-bold text-white">
+                  {stats.currentStreak}{" "}
+                  <span className="text-xs text-slate-500 font-normal">
+                    days
+                  </span>
+                </p>
+              </div>
+              <Flame
+                size={24}
+                className="text-orange-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.5)]"
+              />
+            </div>
+          </div>
           {/* --- ACTIVE SUMMARY (CUSTOM HEATMAP) --- */}
           <div className="h-auto min-h-[280px] bg-slate-950 p-8 border-b border-slate-800 flex flex-col">
             <div className="flex items-center justify-between mb-6">
@@ -252,8 +286,10 @@ export default function StudentDashboard({
               </div>
             </div>
 
+            {/* Added overflow-x-auto and ensured full width usage */}
             <div className="flex-1 w-full bg-slate-900/40 rounded-xl border border-rose-500/10 p-4 overflow-x-auto custom-scrollbar">
               {/* CSS GRID HEATMAP */}
+              {/* w-max ensures the grid doesn't shrink, forcing scroll if needed */}
               <div className="grid grid-rows-7 grid-flow-col gap-1 w-max">
                 {/* Weekday Labels (Optional, simplifies grid to just show blocks) */}
                 {calendarData.map((day, idx) => (
@@ -272,8 +308,10 @@ export default function StudentDashboard({
             <h3 className="text-lg font-bold text-yellow-300 mb-4 flex items-center gap-2">
               <FileCode size={20} /> Recent Activity
             </h3>
-            <div className="flex-1 overflow-auto rounded-xl border border-yellow-500/20 bg-slate-900/40 shadow-inner">
-              <table className="w-full text-left text-sm">
+            {/* Added overflow-x-auto for horizontal scrolling */}
+            <div className="flex-1 overflow-auto overflow-x-auto rounded-xl border border-yellow-500/20 bg-slate-900/40 shadow-inner">
+              {/* Added min-w-[600px] to prevent column squashing */}
+              <table className="w-full min-w-[600px] text-left text-sm">
                 <thead className="bg-yellow-900/20 text-yellow-200 sticky top-0 z-10 backdrop-blur-md">
                   <tr>
                     <th className="p-4 font-semibold">Problem / Description</th>

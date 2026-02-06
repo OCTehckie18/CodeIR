@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "./lib/supabaseClient";
 import AuthForm from "./components/AuthForm";
 import CodeEditor from "./components/CodeEditor";
-import InstructorEvaluation from "./components/InstructorEvaluation";
+import InstructorEvaluation from "./components/InstructorEvaluation"; // Updated Import
+import InstructorDashboard from "./components/InstructorDashboard"; // New Import
 import StudentDashboard from "./components/StudentDashboard";
 import { Loader2 } from "lucide-react";
 
@@ -11,12 +12,22 @@ function App() {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // View state: 'dashboard' or 'editor'
-  const [currentView, setCurrentView] = useState<"editor" | "dashboard">(
+  // VIEW STATES
+  const [studentView, setStudentView] = useState<"editor" | "dashboard">(
     "dashboard",
   );
 
+  // INSTRUCTOR STATES
+  const [instructorView, setInstructorView] = useState<
+    "dashboard" | "evaluation"
+  >("dashboard");
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<
+    string | undefined
+  >(undefined);
+
   useEffect(() => {
+    // ... (Your existing auth useEffect logic remains the same) ...
+    // Just ensure fetching role works as before
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) fetchRole(session.user.id);
@@ -47,32 +58,41 @@ function App() {
     setLoading(false);
   };
 
-  if (loading) {
-    return (
-      <div className="h-screen w-screen bg-slate-950 flex items-center justify-center text-cyan-500">
-        <Loader2 className="animate-spin h-10 w-10" />
-      </div>
-    );
-  }
-
+  if (loading)
+    return <Loader2 className="animate-spin h-10 w-10 text-cyan-500 m-auto" />;
   if (!session) return <AuthForm />;
 
+  // === INSTRUCTOR ROUTING ===
   if (role === "instructor") {
-    return <InstructorEvaluation />;
+    if (instructorView === "dashboard") {
+      return (
+        <InstructorDashboard
+          onNavigate={(view, subId) => {
+            setInstructorView(view);
+            setSelectedSubmissionId(subId);
+          }}
+        />
+      );
+    } else {
+      return (
+        <InstructorEvaluation
+          submissionId={selectedSubmissionId}
+          onBack={() => {
+            setInstructorView("dashboard");
+            setSelectedSubmissionId(undefined);
+          }}
+        />
+      );
+    }
   }
 
   // === STUDENT ROUTING ===
-  const handleNavigate = (page: string) => {
-    setCurrentView(page as "editor" | "dashboard");
-  };
-
   return (
     <div>
-      {currentView === "dashboard" ? (
-        <StudentDashboard onNavigate={handleNavigate} />
+      {studentView === "dashboard" ? (
+        <StudentDashboard onNavigate={setStudentView} />
       ) : (
-        // FIX: Pass the navigation function here too!
-        <CodeEditor onNavigate={handleNavigate} />
+        <CodeEditor onNavigate={setStudentView} />
       )}
     </div>
   );
