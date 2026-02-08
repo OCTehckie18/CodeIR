@@ -46,3 +46,9 @@ lerna-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# Vite cache
+.vite/
+
+# ESLint cache
+.eslintcache
