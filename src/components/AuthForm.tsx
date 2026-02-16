@@ -96,7 +96,7 @@ export default function AuthForm() {
           {/* Graphic Cards */}
           <div className="w-full space-y-5">
             {[
-              { Icon: Code, glow: "top", name: "Describe" },
+              { Icon: Code, glow: "top", name: "Code" },
               { Icon: Settings, glow: "middle", name: "Re-invent" },
               { Icon: Atom, glow: "bottom", name: "Evaluate" },
             ].map((Item, idx) => (
