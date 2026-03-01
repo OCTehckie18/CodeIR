@@ -2,9 +2,9 @@
 
 ## Overview
 
-**CodeIR** is a full-stack educational web application designed to bridge the gap between high-level source code and compiler Intermediate Representations (IR). It features a sophisticated dual-role architecture (Student/Instructor) enabling real-time code submission, IR visualization, and rubric-based evaluation.
+**CodeIR** is a full-stack educational web application designed to bridge the gap between high-level source code and compiler Intermediate Representations (IR). It features a sophisticated dual-role architecture (Student/Instructor) enabling real-time code submission, AI-powered code evaluation, IR visualization, and rubric-based assessment.
 
-The system leverages a **Serverless Architecture** via Supabase, employing strictly typed **TypeScript** interfaces on the frontend to ensure type safety across the full stack.
+The system leverages a **Serverless Architecture** via Supabase alongside a **Local LLM integration (Ollama)**, employing strictly typed **TypeScript** interfaces on the frontend to ensure type safety across the full stack.
 
 ---
 
@@ -41,8 +41,9 @@ graph TD
 ### Key Technical Decisions
 
 1. **Monaco Editor Integration:** Utilizes `@monaco-editor/react` to provide VS Code-level editing capabilities (IntelliSense, syntax highlighting) directly in the browser.
-2. **Tailwind CSS v4:** Adopts the latest CSS-first configuration approach for high-performance atomic styling, utilizing `dvh` units for robust mobile responsiveness.
-3. **Supabase Auth & RLS:** Authentication is decoupled from application logic. Data security is enforced at the database engine level via PostgreSQL Row Level Security (RLS) policies.
+2. **Local AI Evaluation Pipeline:** Integrates with Ollama to run a local LLM for evaluating code correctness, generating pseudocode (IR), and providing live translations to multiple programming languages (Python, Java, C++).
+3. **Tailwind CSS v4:** Adopts the latest CSS-first configuration approach for high-performance atomic styling, utilizing `dvh` units for robust mobile responsiveness.
+4. **Supabase Auth & RLS:** Authentication is decoupled from application logic. Data security is enforced at the database engine level via PostgreSQL Row Level Security (RLS) policies.
 
 ---
 
@@ -66,6 +67,11 @@ graph TD
 - **Database:** PostgreSQL 15+
 - **Auth:** Supabase Auth (JWT based)
 - **API:** PostgREST (Auto-generated REST API from Schema)
+
+### AI & Evaluation Engine
+
+- **Local LLM Manager:** Ollama
+- **Features:** Code correctness validation, high-level IR generation, and cross-language translation.
 
 ---
 
@@ -229,8 +235,14 @@ npm run dev
 
 The application determines the UI to render based on user metadata:
 
-- **Student:** Accesses `CodeEditor.tsx`. Can write code, view mock IR generation, and submit.
+- **Student:** Accesses `CodeEditor.tsx`. Can write code, validate logic using the local AI evaluator, view generated IR / language translations, and submit.
 - **Instructor:** Accesses `InstructorEvaluation.tsx`. Can view student code (read-only/writeable depending on mode), view IR, and input rubric scores/feedback.
+
+### AI-Powered Code Validation Pipeline
+
+- **Correctness Check:** The student's source code and problem description are sent to a local LLM to be validated.
+- **Dynamic IR Generation:** Once validated as correct, the code is parsed into structured pseudocode.
+- **Language Translation:** Code is simultaneously translated into Python, Java, and C++ for comparative learning.
 
 ### Sandbox Mode
 
