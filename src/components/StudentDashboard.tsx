@@ -39,7 +39,11 @@ export default function StudentDashboard({
       if (!session) return;
       setUser(session.user);
 
-      const response = await axios.get(`http://localhost:5000/api/dashboard/${session.user.id}`);
+      const response = await axios.get(`http://127.0.0.1:5000/api/dashboard/${session.user.id}`, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
 
       if (!response.data.success) {
         throw new Error(response.data.error || "Failed to fetch student dashboard data");

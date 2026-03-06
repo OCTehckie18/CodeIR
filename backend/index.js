@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { createClient } = require("@supabase/supabase-js");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 
@@ -16,12 +17,30 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+const createAuthClient = (req) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+        return createClient(supabaseUrl, supabaseKey, {
+            global: {
+                headers: {
+                    Authorization: authHeader
+                }
+            }
+        });
+    }
+    return supabase;
+};
+
 const axios = require("axios");
 
 // Basic health check route
 app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "ok", message: "CodeIR Express Backend is running!" });
 });
+
+// Initialize Gemini AI Client
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 // 1. EVALUATION AND CODE VALIDATION ENDPOINT
 app.post("/api/evaluate-code", async (req, res) => {
@@ -32,43 +51,34 @@ app.post("/api/evaluate-code", async (req, res) => {
     }
 
     try {
-        console.log("Validating correctness with Ollama...");
+        console.log("Validating correctness with Gemini...");
 
         // Step 1: Check Correctness
-        const resCorrectness = await axios.post('http://localhost:11434/api/generate', {
-            model: 'gpt-oss',
-            prompt: `You are an expert code reviewer. Read the following problem description and the provided code. Is the code a completely correct solution to the problem? Respond with EXACTLY the word 'CORRECT' if it is correct, or provide brief feedback on what is wrong if it is incorrect.\nProblem: ${description}\nCode:\n${code}`,
-            stream: false
-        });
-
-        const feedback = resCorrectness.data.response.trim();
+        const correctnessPrompt = `You are an expert code reviewer. Read the following problem description and the provided code. Is the code a completely correct solution to the problem? Respond with EXACTLY the word 'CORRECT' if it is correct, or provide brief feedback on what is wrong if it is incorrect.\nProblem: ${description}\nCode:\n${code}`;
+        const resultCorrectness = await model.generateContent(correctnessPrompt);
+        const feedback = resultCorrectness.response.text().trim();
 
         if (feedback.toUpperCase().includes("CORRECT") && feedback.length < 50) {
             console.log("Code is CORRECT! Generating IR and translations...");
 
             // Step 2: Generate IR and Translations in parallel
+            const irPrompt = `Generate high-level pseudocode for the following code. Output ONLY the pseudocode. Do not include any other text.\nCode:\n${code}`;
+            const translatePrompt = `Translate the following code into Python, Java, and C++. Format the output clearly with markdown code blocks.\nCode:\n${code}`;
+
             const [resIR, resTranslate] = await Promise.all([
-                axios.post('http://localhost:11434/api/generate', {
-                    model: 'gpt-oss',
-                    prompt: `Generate high-level pseudocode for the following code. Output ONLY the pseudocode. Do not include any other text.\nCode:\n${code}`,
-                    stream: false
-                }),
-                axios.post('http://localhost:11434/api/generate', {
-                    model: 'gpt-oss',
-                    prompt: `Translate the following code into Python, Java, and C++. Format the output clearly with markdown code blocks.\nCode:\n${code}`,
-                    stream: false
-                })
+                model.generateContent(irPrompt),
+                model.generateContent(translatePrompt)
             ]);
 
-            const irOutput = resIR.data.response;
-            const translatedCode = resTranslate.data.response;
+            const irOutput = resIR.response.text();
+            const translatedCode = resTranslate.response.text();
 
             return res.status(200).json({
                 success: true,
                 status: "valid",
                 feedback: "CORRECT",
-                irOutput,
-                translatedCode
+                irOutput: irOutput,
+                translatedCode: translatedCode
             });
         } else {
             console.log("Validation Failed:", feedback);
@@ -81,23 +91,24 @@ app.post("/api/evaluate-code", async (req, res) => {
 
     } catch (error) {
         console.error("Evaluation Error:", error.message);
-        return res.status(500).json({ success: false, error: "Failed to connect to Ollama evaluating engine.", details: error.message });
+        return res.status(500).json({ success: false, error: "Failed to connect to Gemini evaluating engine.", details: error.message });
     }
 });
 
 // 2. DATABASE SUBMISSION ENDPOINT (Relational Inserts)
 app.post("/api/submissions", async (req, res) => {
-    const { userId, description, code, language, irOutput, translatedCode } = req.body;
+    const { userId, description, code, language, irOutput, translatedCode, validationStatus } = req.body;
 
-    if (!userId || !description || !code || !irOutput) {
+    if (!userId || !description || !code) {
         return res.status(400).json({ success: false, error: "Missing required fields for submission." });
     }
 
     try {
         console.log("Handling database inserts...");
+        const authSupabase = createAuthClient(req);
 
         // 1. Insert Problem dynamically
-        const { data: newProblem, error: problemError } = await supabase
+        const { data: newProblem, error: problemError } = await authSupabase
             .from("problems")
             .insert({ problem_statement: description })
             .select()
@@ -106,14 +117,14 @@ app.post("/api/submissions", async (req, res) => {
         if (problemError) throw problemError;
 
         // 2. Insert Submission
-        const { data: sub, error: subError } = await supabase
+        const { data: sub, error: subError } = await authSupabase
             .from("submissions")
             .insert({
                 user_id: userId,
                 problem_id: newProblem.problem_id,
                 source_code: code,
                 source_language: language,
-                validation_status: "valid",
+                validation_status: validationStatus || "pending",
             })
             .select()
             .single();
@@ -121,7 +132,7 @@ app.post("/api/submissions", async (req, res) => {
         if (subError) throw subError;
 
         // 3. Insert Pseudocode
-        const { data: pseudo, error: pseudoError } = await supabase
+        const { data: pseudo, error: pseudoError } = await authSupabase
             .from("pseudocodes")
             .insert({
                 submission_id: sub.submission_id,
@@ -133,7 +144,7 @@ app.post("/api/submissions", async (req, res) => {
         if (pseudoError) throw pseudoError;
 
         // 4. Insert Translations
-        const { error: transError } = await supabase
+        const { error: transError } = await authSupabase
             .from("translations")
             .insert({
                 pseudocode_id: pseudo.pseudocode_id,
@@ -142,7 +153,7 @@ app.post("/api/submissions", async (req, res) => {
             });
 
         if (transError) throw transError;
-
+        console.log("Submission saved successfully!");
         return res.status(201).json({ success: true, message: "Submission successfully securely saved!" });
 
     } catch (error) {
@@ -151,11 +162,11 @@ app.post("/api/submissions", async (req, res) => {
     }
 });
 
-// 3. STUDENT DASHBOARD API
 app.get("/api/dashboard/:userId", async (req, res) => {
     try {
+        const authSupabase = createAuthClient(req);
         const { userId } = req.params;
-        const { data, error } = await supabase
+        const { data, error } = await authSupabase
             .from("submissions")
             .select(`
                 submission_id, submission_timestamp, validation_status, source_code,
@@ -177,7 +188,8 @@ app.get("/api/dashboard/:userId", async (req, res) => {
 // 4. INSTRUCTOR DASHBOARD API
 app.get("/api/instructor/dashboard", async (req, res) => {
     try {
-        const { data, error } = await supabase
+        const authSupabase = createAuthClient(req);
+        const { data, error } = await authSupabase
             .from("submissions")
             .select(`
                 submission_id, submission_timestamp, validation_status, source_code, user_id,
@@ -197,8 +209,9 @@ app.get("/api/instructor/dashboard", async (req, res) => {
 // 5. FETCH SPECIFIC SUBMISSION FOR EVALUATION
 app.get("/api/submissions/:submissionId", async (req, res) => {
     try {
+        const authSupabase = createAuthClient(req);
         const { submissionId } = req.params;
-        const { data, error } = await supabase
+        const { data, error } = await authSupabase
             .from("submissions")
             .select("*, pseudocodes ( structured_blocks )")
             .eq("submission_id", submissionId)
@@ -215,13 +228,14 @@ app.get("/api/submissions/:submissionId", async (req, res) => {
 // 6. UPSERT EVALUATION API
 app.post("/api/evaluations", async (req, res) => {
     try {
+        const authSupabase = createAuthClient(req);
         const { submissionId, scores, feedback } = req.body;
 
         if (!submissionId) {
             return res.status(400).json({ success: false, error: "Missing submission ID." });
         }
 
-        const { error } = await supabase.from("evaluations").upsert(
+        const { error } = await authSupabase.from("evaluations").upsert(
             {
                 submission_id: submissionId,
                 final_scores: scores,

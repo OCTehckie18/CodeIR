@@ -56,7 +56,9 @@ export default function InstructorEvaluation({
       if (submissionId) {
         // FETCH SPECIFIC SUBMISSION BASED ON ID
         try {
-          const response = await axios.get(`http://localhost:5000/api/submissions/${submissionId}`);
+          const response = await axios.get(`http://127.0.0.1:5000/api/submissions/${submissionId}`, {
+            headers: { Authorization: `Bearer ${session?.access_token}` }
+          });
 
           if (!response.data.success) {
             throw new Error(response.data.error || "Failed to fetch submission details");
@@ -108,13 +110,17 @@ export default function InstructorEvaluation({
     setLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+
       const payload = {
         submissionId: submission.submission_id,
         scores,
         feedback
       };
 
-      const response = await axios.post("http://localhost:5000/api/evaluations", payload);
+      const response = await axios.post("http://127.0.0.1:5000/api/evaluations", payload, {
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      });
 
       if (!response.data.success) {
         throw new Error(response.data.error || "Failed to save evaluation");

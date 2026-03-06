@@ -46,13 +46,14 @@ export default function CodeEditor({ onNavigate }: CodeEditorProps) {
     "// Translated code will appear here",
   );
   const [user, setUser] = useState<any>(null);
-  const [isValidated, setIsValidated] = useState(false);
+  const [validationStatus, setValidationStatus] = useState<"pending" | "valid" | "invalid">("pending");
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
 
   const [copiedIr, setCopiedIr] = useState(false);
 
   const handleCopyIr = () => {
+    if (validationStatus !== "valid") return alert("Generate valid IR before copying.");
     navigator.clipboard.writeText(irOutput);
     setCopiedIr(true);
     setTimeout(() => setCopiedIr(false), 2000);
@@ -71,22 +72,35 @@ export default function CodeEditor({ onNavigate }: CodeEditorProps) {
 
   // Handle Code Submission
   const handleSubmit = async () => {
+    console.log("Submit pressed");
     if (!user) return alert("Please login first");
-    if (!description.trim()) return alert("Please provide a problem description.");
-    if (!isValidated) return alert("Please validate your code successfully before submitting.");
+    if (!description.trim()) return alert("Please provide a problem description so we can track it.");
+    if (!code.trim() || code.includes("Write your source code here")) {
+      return alert("Please enter some actionable source code.");
+    }
+    if (validationStatus !== "valid") {
+      return alert("You must successfully validate your code and generate Pseudocode before saving.");
+    }
     setLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+
       const payload = {
         userId: user.id,
         description,
         code,
         language,
         irOutput,
-        translatedCode
+        translatedCode,
+        validationStatus
       };
 
-      const response = await axios.post("http://localhost:5000/api/submissions", payload);
+      const response = await axios.post("http://127.0.0.1:5000/api/submissions", payload, {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        }
+      });
 
       if (response.data.success) {
         setSubmissionSuccess(true);
@@ -111,11 +125,11 @@ export default function CodeEditor({ onNavigate }: CodeEditorProps) {
     setAiHints(["Evaluating code correctness with local LLM..."]);
     setIrOutput("Waiting for validation...");
     setTranslatedCode("Waiting for validation...");
-    setIsValidated(false);
+    setValidationStatus("pending");
     setSubmissionSuccess(false);
 
     try {
-      const response = await axios.post("http://localhost:5000/api/evaluate-code", {
+      const response = await axios.post("http://127.0.0.1:5000/api/evaluate-code", {
         code,
         description
       });
@@ -130,12 +144,12 @@ export default function CodeEditor({ onNavigate }: CodeEditorProps) {
         setIrOutput(apiIrOutput);
         setTranslatedCode(apiTranslatedCode);
         setAiHints(["Validation complete. Code is correct. You can now save your submission."]);
-        setIsValidated(true);
+        setValidationStatus("valid");
       } else {
         setIrOutput("Validation failed. Please fix the code based on the feedback.");
         setTranslatedCode("Validation failed. Please fix the code based on the feedback.");
         setAiHints(["Validation Failed", feedback, "Please fix your code and try validating again."]);
-        setIsValidated(false);
+        setValidationStatus("invalid");
       }
     } catch (error: any) {
       console.error(error);
@@ -334,7 +348,7 @@ export default function CodeEditor({ onNavigate }: CodeEditorProps) {
                 </p>
                 <button
                   onClick={() => onNavigate?.("dashboard")}
-                  className="mt-4 px-6 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg shadow-lg flex items-center gap-2 transition-transform hover:-translate-y-1"
+                  className="z-10 mt-4 px-6 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg shadow-lg flex items-center gap-2 transition-transform hover:-translate-y-1"
                 >
                   <LayoutDashboard size={18} />
                   Return to Dashboard
@@ -351,23 +365,40 @@ export default function CodeEditor({ onNavigate }: CodeEditorProps) {
                   </p>
                 </div>
 
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading || !isValidated}
-                  className={`w-full py-4 mt-4 rounded-lg font-bold text-sm uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition-all transform
-                    ${loading || !isValidated
-                      ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
-                      : "bg-emerald-500 hover:bg-emerald-400 hover:-translate-y-1 text-slate-950 shadow-emerald-500/20"
-                    }
-                  `}
-                >
-                  {loading ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <Save size={18} />
+                <div className="flex flex-col gap-3 mt-4 w-full z-10">
+                  <button
+                    onClick={() => handleSubmit()}
+                    disabled={loading || validationStatus !== "valid"}
+                    className={`w-full py-4 rounded-lg font-bold text-sm uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition-all transform
+                      ${loading || validationStatus !== "valid"
+                        ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
+                        : "bg-emerald-500 hover:bg-emerald-400 hover:-translate-y-1 text-slate-950 shadow-emerald-500/20"
+                      }
+                    `}
+                  >
+                    {loading ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <Save size={18} />
+                    )}
+                    {loading ? "Processing..." : validationStatus !== "valid" ? "Validate First to Save" : "Submit / Save"}
+                  </button>
+
+                  {validationStatus !== "pending" && (
+                    <button
+                      onClick={() => {
+                        setValidationStatus("pending");
+                        setIrOutput("{\n  'block': 'entry',\n  'ops': []\n}");
+                        setTranslatedCode("// Translated code will appear here");
+                        setAiHints(["Validation canceled. You can edit your code and re-validate."]);
+                      }}
+                      disabled={loading}
+                      className="w-full py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-rose-400 bg-rose-950/30 hover:bg-rose-900/50 border border-rose-500/30 transition-colors flex items-center justify-center gap-2"
+                    >
+                      Cancel Validation
+                    </button>
                   )}
-                  {loading ? "Processing..." : !isValidated ? "Validate First to Save" : "Submit / Save"}
-                </button>
+                </div>
               </>
             )}
           </div>
