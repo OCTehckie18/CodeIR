@@ -332,60 +332,66 @@ export default function StudentDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-yellow-500/10">
-                  {submissions.map((sub) => (
-                    <tr
-                      key={sub.submission_id}
-                      className="hover:bg-yellow-500/5 transition-colors"
-                    >
-                      <td className="p-4 max-w-[200px]">
-                        <div className="font-medium text-slate-200 truncate">
-                          {sub.problems?.problem_statement
-                            ? sub.problems.problem_statement.slice(0, 30) + "..."
-                            : "Untitled Problem"}
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          {new Date(sub.submission_timestamp).toLocaleDateString()}
-                        </div>
-                      </td>
-                      <td className="p-4 font-mono text-xs text-slate-400 max-w-[150px]">
-                        <div className="truncate bg-slate-950 p-1.5 rounded border border-slate-800">
-                          {sub.source_code
-                            ? sub.source_code.slice(0, 20) + "..."
-                            : "-"}
-                        </div>
-                      </td>
-                      <td className="p-4 font-mono text-xs text-yellow-100/70 max-w-[150px]">
-                        <div className="flex items-center gap-1">
-                          <FileJson size={12} />
-                          {sub.pseudocodes ? "Generated" : "Pending"}
-                        </div>
-                      </td>
-                      <td className="p-4 max-w-[200px]">
-                        {sub.evaluations && sub.evaluations.length > 0 ? (
-                          <div className="text-slate-300 text-xs italic">
-                            "{sub.evaluations[0].teacher_feedback || "No comments"}"
+                  {submissions.map((sub) => {
+                    const evalObj = sub.evaluations ? (Array.isArray(sub.evaluations) ? sub.evaluations[0] : sub.evaluations) : null;
+                    const isEvaluated = !!evalObj;
+                    const hasScores = isEvaluated && evalObj.final_scores;
+
+                    return (
+                      <tr
+                        key={sub.submission_id}
+                        className="hover:bg-yellow-500/5 transition-colors"
+                      >
+                        <td className="p-4 max-w-[200px]">
+                          <div className="font-medium text-slate-200 truncate">
+                            {sub.problems?.problem_statement
+                              ? sub.problems.problem_statement.slice(0, 30) + "..."
+                              : "Untitled Problem"}
                           </div>
-                        ) : (
-                          <span className="text-slate-600 text-xs">-</span>
-                        )}
-                      </td>
-                      <td className="p-4 text-center">
-                        {sub.evaluations && sub.evaluations.length > 0 && sub.evaluations[0].final_scores ? (
-                          <span className="inline-flex items-center justify-center font-mono font-bold bg-pink-500/10 text-pink-400 px-2 py-1 rounded border border-pink-500/20 shadow-sm">
-                            {(sub.evaluations[0].final_scores.correctness || 0) +
-                              (sub.evaluations[0].final_scores.efficiency || 0) +
-                              (sub.evaluations[0].final_scores.style || 0)}
-                            <span className="text-[10px] text-pink-500/60 ml-0.5">/30</span>
-                          </span>
-                        ) : (
-                          <span className="text-slate-600 text-xs">-</span>
-                        )}
-                      </td>
-                      <td className="p-4 text-right">
-                        <StatusBadge status={sub.validation_status} />
-                      </td>
-                    </tr>
-                  ))}
+                          <div className="text-xs text-slate-500 mt-1">
+                            {new Date(sub.submission_timestamp).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="p-4 font-mono text-xs text-slate-400 max-w-[150px]">
+                          <div className="truncate bg-slate-950 p-1.5 rounded border border-slate-800">
+                            {sub.source_code
+                              ? sub.source_code.slice(0, 20) + "..."
+                              : "-"}
+                          </div>
+                        </td>
+                        <td className="p-4 font-mono text-xs text-yellow-100/70 max-w-[150px]">
+                          <div className="flex items-center gap-1">
+                            <FileJson size={12} />
+                            {sub.pseudocodes ? "Generated" : "Pending"}
+                          </div>
+                        </td>
+                        <td className="p-4 max-w-[200px]">
+                          {isEvaluated ? (
+                            <div className="text-slate-300 text-xs italic">
+                              "{evalObj.teacher_feedback || "No comments"}"
+                            </div>
+                          ) : (
+                            <span className="text-slate-600 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center">
+                          {hasScores ? (
+                            <span className="inline-flex items-center justify-center font-mono font-bold bg-pink-500/10 text-pink-400 px-2 py-1 rounded border border-pink-500/20 shadow-sm">
+                              {(evalObj.final_scores.correctness || 0) +
+                                (evalObj.final_scores.efficiency || 0) +
+                                (evalObj.final_scores.style || 0)}
+                              <span className="text-[10px] text-pink-500/60 ml-0.5">/30</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-600 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-right">
+                          <StatusBadge status={sub.validation_status} />
+                        </td>
+                      </tr>
+                    )
+                  })}
                   {submissions.length === 0 && (
                     <tr>
                       <td

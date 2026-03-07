@@ -52,7 +52,7 @@ export default function InstructorDashboard({
       // Calculate Stats
       const total = safeData.length;
       const evaluated = safeData.filter(
-        (s: any) => s.evaluations && s.evaluations.length > 0,
+        (s: any) => s.evaluations && (Array.isArray(s.evaluations) ? s.evaluations.length > 0 : Object.keys(s.evaluations).length > 0),
       ).length;
       const pending = total - evaluated;
 
@@ -237,12 +237,12 @@ export default function InstructorDashboard({
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
                   {submissions.map((sub) => {
-                    const isEvaluated =
-                      sub.evaluations && sub.evaluations.length > 0;
+                    const evalObj = sub.evaluations ? (Array.isArray(sub.evaluations) ? sub.evaluations[0] : sub.evaluations) : null;
+                    const isEvaluated = !!evalObj && !!evalObj.final_scores;
                     const score = isEvaluated
-                      ? (sub.evaluations[0].final_scores?.correctness || 0) +
-                      (sub.evaluations[0].final_scores?.efficiency || 0) +
-                      (sub.evaluations[0].final_scores?.style || 0)
+                      ? (evalObj.final_scores.correctness || 0) +
+                      (evalObj.final_scores.efficiency || 0) +
+                      (evalObj.final_scores.style || 0)
                       : "-";
 
                     return (
