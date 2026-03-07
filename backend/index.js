@@ -42,21 +42,41 @@ app.get("/api/health", (req, res) => {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
+// Helper to switch engines transparently
+async function generateAIContent(engine, prompt) {
+    if (engine === "ollama") {
+        try {
+            const res = await axios.post("http://localhost:11434/api/generate", {
+                model: "gpt-oss:latest", // Match exact local model name available
+                prompt: prompt,
+                stream: false
+            });
+            return res.data.response;
+        } catch (error) {
+            console.error("Ollama Error:", error.message);
+            throw new Error("Failed to connect to local Ollama engine. Is it running?");
+        }
+    } else {
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+    }
+}
+
 // 1. EVALUATION AND CODE VALIDATION ENDPOINT
 app.post("/api/evaluate-code", async (req, res) => {
-    const { code, description } = req.body;
+    const { code, description, engine = "ollama" } = req.body;
 
     if (!code || !description) {
         return res.status(400).json({ success: false, error: "Code and description are required." });
     }
 
     try {
-        console.log("Validating correctness with Gemini...");
+        console.log(`Validating correctness with ${engine.toUpperCase()}...`);
 
         // Step 1: Check Correctness
         const correctnessPrompt = `You are an expert code reviewer. Read the following problem description and the provided code. Is the code a completely correct solution to the problem? Respond with EXACTLY the word 'CORRECT' if it is correct, or provide brief feedback on what is wrong if it is incorrect.\nProblem: ${description}\nCode:\n${code}`;
-        const resultCorrectness = await model.generateContent(correctnessPrompt);
-        const feedback = resultCorrectness.response.text().trim();
+        const rawFeedback = await generateAIContent(engine, correctnessPrompt);
+        const feedback = rawFeedback.trim();
 
         if (feedback.toUpperCase().includes("CORRECT") && feedback.length < 50) {
             console.log("Code is CORRECT! Generating IR and translations...");
@@ -65,13 +85,10 @@ app.post("/api/evaluate-code", async (req, res) => {
             const irPrompt = `Generate high-level pseudocode for the following code. Output ONLY the pseudocode. Do not include any other text.\nCode:\n${code}`;
             const translatePrompt = `Translate the following code into Python, Java, and C++. Format the output clearly with markdown code blocks.\nCode:\n${code}`;
 
-            const [resIR, resTranslate] = await Promise.all([
-                model.generateContent(irPrompt),
-                model.generateContent(translatePrompt)
+            const [irOutput, translatedCode] = await Promise.all([
+                generateAIContent(engine, irPrompt),
+                generateAIContent(engine, translatePrompt)
             ]);
-
-            const irOutput = resIR.response.text();
-            const translatedCode = resTranslate.response.text();
 
             return res.status(200).json({
                 success: true,
@@ -91,7 +108,7 @@ app.post("/api/evaluate-code", async (req, res) => {
 
     } catch (error) {
         console.error("Evaluation Error:", error.message);
-        return res.status(500).json({ success: false, error: "Failed to connect to Gemini evaluating engine.", details: error.message });
+        return res.status(500).json({ success: false, error: error.message, details: error.message });
     }
 });
 
@@ -154,7 +171,7 @@ app.post("/api/submissions", async (req, res) => {
 
         if (transError) throw transError;
         console.log("Submission saved successfully!");
-        return res.status(201).json({ success: true, message: "Submission successfully securely saved!" });
+        return res.status(201).json({ success: true, message: "Submission successfully securely saved!", submissionId: sub.submission_id });
 
     } catch (error) {
         console.error("Database Insert Error:", error.message);
@@ -188,8 +205,9 @@ app.get("/api/dashboard/:userId", async (req, res) => {
 // 4. INSTRUCTOR DASHBOARD API
 app.get("/api/instructor/dashboard", async (req, res) => {
     try {
-        const authSupabase = createAuthClient(req);
-        const { data, error } = await authSupabase
+        // Use Global Admin Client to bypass Student-only RLS
+        const adminSupabase = supabase;
+        const { data, error } = await adminSupabase
             .from("submissions")
             .select(`
                 submission_id, submission_timestamp, validation_status, source_code, user_id,
@@ -209,11 +227,12 @@ app.get("/api/instructor/dashboard", async (req, res) => {
 // 5. FETCH SPECIFIC SUBMISSION FOR EVALUATION
 app.get("/api/submissions/:submissionId", async (req, res) => {
     try {
-        const authSupabase = createAuthClient(req);
+        // Use Global Admin Client to bypass Student-only RLS
+        const adminSupabase = supabase;
         const { submissionId } = req.params;
-        const { data, error } = await authSupabase
+        const { data, error } = await adminSupabase
             .from("submissions")
-            .select("*, pseudocodes ( structured_blocks )")
+            .select("*, pseudocodes ( structured_blocks ), evaluations ( final_scores, teacher_feedback )")
             .eq("submission_id", submissionId)
             .single();
 
@@ -228,16 +247,18 @@ app.get("/api/submissions/:submissionId", async (req, res) => {
 // 6. UPSERT EVALUATION API
 app.post("/api/evaluations", async (req, res) => {
     try {
-        const authSupabase = createAuthClient(req);
-        const { submissionId, scores, feedback } = req.body;
+        // Use Global Admin Client to bypass Student-only RLS
+        const adminSupabase = supabase;
+        const { submissionId, instructorId, scores, feedback } = req.body;
 
-        if (!submissionId) {
-            return res.status(400).json({ success: false, error: "Missing submission ID." });
+        if (!submissionId || !instructorId) {
+            return res.status(400).json({ success: false, error: "Missing submission ID or instructor ID." });
         }
 
-        const { error } = await authSupabase.from("evaluations").upsert(
+        const { error } = await adminSupabase.from("evaluations").upsert(
             {
                 submission_id: submissionId,
+                instructor_id: instructorId,
                 final_scores: scores,
                 teacher_feedback: feedback,
             },
@@ -248,6 +269,42 @@ app.post("/api/evaluations", async (req, res) => {
 
         res.status(200).json({ success: true, message: "Evaluation saved successfully" });
     } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 7. AUTO GRADE API
+app.post("/api/auto-grade", async (req, res) => {
+    try {
+        const { code, description, engine = "ollama" } = req.body;
+
+        if (!code) {
+            return res.status(400).json({ success: false, error: "Code is required for auto-grading." });
+        }
+
+        console.log(`Auto-grading with ${engine.toUpperCase()}...`);
+        const prompt = `You are an expert Computer Science Instructor grading a student's code. 
+Problem Description: ${description || "Unknown"}
+Student Code:
+${code}
+
+Grade the code strictly on three metrics out of 10: correctness, efficiency, and style.
+Provide a brief feedback string explaining the grade.
+Return EXACTLY a JSON string with no markdown blocks or extra text, in this format:
+{"correctness": number, "efficiency": number, "style": number, "feedback": "string"}`;
+
+        const rawText = await generateAIContent(engine, prompt);
+        let text = rawText.trim();
+        // Strip markdown backticks if AI adds them
+        if (text.startsWith("\`\`\`json")) text = text.replace(/\`\`\`json/g, "");
+        if (text.startsWith("\`\`\`")) text = text.replace(/\`\`\`/g, "");
+        if (text.endsWith("\`\`\`")) text = text.replace(/\`\`\`/g, "");
+
+        const parsed = JSON.parse(text.trim());
+
+        res.status(200).json({ success: true, data: parsed });
+    } catch (error) {
+        console.error("Auto Grade Error:", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });

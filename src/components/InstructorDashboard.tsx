@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
 import {
@@ -38,7 +38,9 @@ export default function InstructorDashboard({
       if (!session) return;
       setUser(session.user);
 
-      const response = await axios.get("http://localhost:5000/api/instructor/dashboard");
+      const response = await axios.get("http://127.0.0.1:5000/api/instructor/dashboard", {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
 
       if (!response.data.success) {
         throw new Error(response.data.error || "Failed to fetch instructor dashboard data");
@@ -65,6 +67,17 @@ export default function InstructorDashboard({
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-slate-950 text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400"></div>
+          <p className="text-emerald-400/80 tracking-widest text-sm font-bold uppercase">Loading Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-white font-sans overflow-hidden">
@@ -215,6 +228,7 @@ export default function InstructorDashboard({
                   <tr>
                     <th className="p-4 font-semibold">Student ID</th>
                     <th className="p-4 font-semibold">Problem</th>
+                    <th className="p-4 font-semibold">Code Preview</th>
                     <th className="p-4 font-semibold">Submitted</th>
                     <th className="p-4 font-semibold">Status</th>
                     <th className="p-4 font-semibold">Score</th>
@@ -243,6 +257,13 @@ export default function InstructorDashboard({
                           {sub.problems?.problem_statement
                             ? sub.problems.problem_statement.slice(0, 30) + "..."
                             : "Untitled Problem"}
+                        </td>
+                        <td className="p-4 font-mono text-xs text-slate-400 max-w-[150px]">
+                          <div className="truncate bg-slate-950 p-1.5 rounded border border-slate-800">
+                            {sub.source_code
+                              ? sub.source_code.slice(0, 25) + "..."
+                              : "-"}
+                          </div>
                         </td>
                         <td className="p-4 text-slate-400">
                           {new Date(sub.submission_timestamp).toLocaleDateString()}{" "}

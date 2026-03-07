@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
 import {
@@ -149,6 +149,17 @@ export default function StudentDashboard({
         return "bg-slate-800/50"; // Empty
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-slate-950 text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400"></div>
+          <p className="text-emerald-400/80 tracking-widest text-sm font-bold uppercase">Loading Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-950 text-white font-sans overflow-hidden">
@@ -316,7 +327,8 @@ export default function StudentDashboard({
                     <th className="p-4 font-semibold">Code (Src)</th>
                     <th className="p-4 font-semibold">IR (Pseudo)</th>
                     <th className="p-4 font-semibold">Feedback</th>
-                    <th className="p-4 font-semibold">Status</th>
+                    <th className="p-4 font-semibold text-center">Score</th>
+                    <th className="p-4 font-semibold text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-yellow-500/10">
@@ -357,7 +369,19 @@ export default function StudentDashboard({
                           <span className="text-slate-600 text-xs">-</span>
                         )}
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 text-center">
+                        {sub.evaluations && sub.evaluations.length > 0 && sub.evaluations[0].final_scores ? (
+                          <span className="inline-flex items-center justify-center font-mono font-bold bg-pink-500/10 text-pink-400 px-2 py-1 rounded border border-pink-500/20 shadow-sm">
+                            {(sub.evaluations[0].final_scores.correctness || 0) +
+                              (sub.evaluations[0].final_scores.efficiency || 0) +
+                              (sub.evaluations[0].final_scores.style || 0)}
+                            <span className="text-[10px] text-pink-500/60 ml-0.5">/30</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-600 text-xs">-</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-right">
                         <StatusBadge status={sub.validation_status} />
                       </td>
                     </tr>
@@ -365,7 +389,7 @@ export default function StudentDashboard({
                   {submissions.length === 0 && (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={6}
                         className="p-8 text-center text-slate-500"
                       >
                         No submissions found. Start coding!

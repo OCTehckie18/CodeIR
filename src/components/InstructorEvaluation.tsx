@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
@@ -13,7 +13,6 @@ import {
   Sparkles,
   Loader2,
   User,
-  AlertTriangle,
 } from "lucide-react";
 
 // 1. Define the Props Interface ensuring onBack is required
@@ -27,6 +26,8 @@ export default function InstructorEvaluation({
   onBack,
 }: InstructorEvaluationProps) {
   const [loading, setLoading] = useState(false);
+  const [isAutoGrading, setIsAutoGrading] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const [submission, setSubmission] = useState<any>(null);
 
   // Local state for code so instructor can edit it
@@ -72,14 +73,23 @@ export default function InstructorEvaluation({
               ? data.pseudocodes.structured_blocks
               : JSON.stringify(data.pseudocodes.structured_blocks, null, 2));
           }
+          if (data.evaluations && data.evaluations.length > 0) {
+            const ev = data.evaluations[0];
+            if (ev.final_scores) {
+              setScores(ev.final_scores);
+            }
+            if (ev.teacher_feedback) {
+              setFeedback(ev.teacher_feedback);
+            }
+          }
         } catch (error) {
           console.error("Error fetching submission:", error);
         }
       } else {
-        // Sandbox Mode (No ID passed)
+        // Manual Mode (No ID passed)
         setSubmission(null);
         setCode(
-          "// Sandbox Mode.\n// No specific student submission selected.\n// You can write code here to test.",
+          "// Manual Evaluation Mode.\n// Paste student code here and click Validate to generate IR.",
         );
       }
     };
@@ -90,30 +100,92 @@ export default function InstructorEvaluation({
     await supabase.auth.signOut();
   };
 
-  const handleAISuggestion = () => {
-    setScores({ correctness: 9, efficiency: 8, style: 7 });
-    setFeedback(
-      "The code logic is sound and handles edge cases well. However, the IR generation step could be optimized by reducing redundant nodes.",
-    );
+  const handleAISuggestion = async () => {
+    setIsAutoGrading(true);
+    try {
+      const description = submission?.problems?.problem_statement || "Instructor evaluating manual code via dashboard.";
+      const engine = localStorage.getItem("aiEngine") || "ollama";
+      const payload = { code, description, engine };
+      const response = await axios.post("http://127.0.0.1:5000/api/auto-grade", payload);
+
+      if (response.data.success && response.data.data) {
+        setScores({
+          correctness: response.data.data.correctness || 0,
+          efficiency: response.data.data.efficiency || 0,
+          style: response.data.data.style || 0
+        });
+        setFeedback(response.data.data.feedback || "Code evaluated successfully by Gemini.");
+      } else {
+        alert("Failed to auto-grade code: " + response.data.error);
+      }
+    } catch (error: any) {
+      console.error(error);
+      const backendError = error.response?.data?.error || error.message;
+      alert("Error reaching auto-grade service: " + backendError);
+    } finally {
+      setIsAutoGrading(false);
+    }
+  };
+
+  const handleValidateCode = async () => {
+    setIsValidating(true);
+    setIrView("{\n  'status': 'Generating IR... Please wait...'\n}");
+    try {
+      const description = submission?.problems?.problem_statement || "Evaluate this code.";
+      const engine = localStorage.getItem("aiEngine") || "ollama";
+      const payload = { code, description, engine };
+      const response = await axios.post("http://127.0.0.1:5000/api/evaluate-code", payload);
+
+      if (response.data.success) {
+        if (response.data.status === "valid") {
+          setIrView(response.data.irOutput);
+        } else {
+          setIrView("{\n  'status': 'Validation Failed',\n  'feedback': " + JSON.stringify(response.data.feedback) + "\n}");
+        }
+      } else {
+        setIrView("{\n  'status': 'Validation Error',\n  'error': " + JSON.stringify(response.data.error) + "\n}");
+      }
+    } catch (error: any) {
+      setIrView("{\n  'status': 'Connection Error',\n  'error': " + JSON.stringify(error.message) + "\n}");
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const handleSubmitEvaluation = async () => {
     if (!user) return;
-
-    if (!submission) {
-      alert(
-        "Sandbox Mode: Evaluation generated but not saved (No student submission linked).",
-      );
-      return;
-    }
 
     setLoading(true);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
+      let targetSubmissionId = submission?.submission_id;
+
+      // Make manual mode fully functional by creating a submission base dynamically
+      if (!targetSubmissionId) {
+        const subPayload = {
+          userId: user.id,
+          description: "Instructor Manual Offline Evaluation",
+          code: code,
+          language: "python",
+          irOutput: irView,
+          translatedCode: "// Offline manually graded code",
+          validationStatus: "valid"
+        };
+        const subRes = await axios.post("http://127.0.0.1:5000/api/submissions", subPayload, {
+          headers: { Authorization: `Bearer ${session?.access_token}` }
+        });
+
+        if (!subRes.data.success) {
+          throw new Error(subRes.data.error || "Failed to establish offline student profile submission");
+        }
+        targetSubmissionId = subRes.data.submissionId;
+      }
+
       const payload = {
-        submissionId: submission.submission_id,
+        submissionId: targetSubmissionId,
+        instructorId: user.id,
         scores,
         feedback
       };
@@ -126,7 +198,7 @@ export default function InstructorEvaluation({
         throw new Error(response.data.error || "Failed to save evaluation");
       }
 
-      alert("Evaluation saved successfully!");
+      alert(submission ? "Evaluation saved successfully!" : "Offline Evaluation & Submission securely saved to database!");
       onBack();
     } catch (error: any) {
       alert("Error saving evaluation: " + (error.response?.data?.error || error.message));
@@ -165,8 +237,8 @@ export default function InstructorEvaluation({
 
         <div className="flex items-center gap-4">
           {!submission && (
-            <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 flex items-center gap-1">
-              <AlertTriangle size={12} /> Sandbox Mode
+            <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1">
+              <CodeIcon size={12} /> Manual Mode
             </span>
           )}
           <div className="text-right hidden sm:block">
@@ -200,9 +272,19 @@ export default function InstructorEvaluation({
             <span className="text-sm font-semibold text-blue-300 flex items-center gap-2">
               <CodeIcon size={16} /> Student Source Code
             </span>
-            <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-200 border border-blue-500/30">
-              {submission?.language || "python"}
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleValidateCode}
+                disabled={isValidating}
+                className="flex items-center gap-1 text-[10px] bg-blue-500 hover:bg-blue-400 text-white px-2 py-1 rounded transition-colors shadow-lg shadow-blue-500/20 disabled:bg-slate-700 disabled:text-slate-400"
+              >
+                {isValidating ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                {isValidating ? "Validating..." : "Validate Code"}
+              </button>
+              <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-200 border border-blue-500/30">
+                {submission?.language || "python"}
+              </span>
+            </div>
           </div>
           <div className="flex-1 pt-2">
             <Editor
@@ -242,9 +324,11 @@ export default function InstructorEvaluation({
               </span>
               <button
                 onClick={handleAISuggestion}
-                className="flex items-center gap-1 text-[10px] bg-pink-500 hover:bg-pink-400 text-white px-2 py-1 rounded transition-colors shadow-lg shadow-pink-500/20"
+                disabled={isAutoGrading}
+                className="flex items-center gap-1 text-[10px] bg-pink-500 hover:bg-pink-400 text-white px-2 py-1 rounded transition-colors shadow-lg shadow-pink-500/20 disabled:bg-slate-700 disabled:text-slate-400"
               >
-                <Sparkles size={10} /> Auto-Grade
+                {isAutoGrading ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                {isAutoGrading ? "Grading..." : "Auto-Grade"}
               </button>
             </div>
 
@@ -340,12 +424,7 @@ export default function InstructorEvaluation({
               <button
                 onClick={handleSubmitEvaluation}
                 disabled={loading}
-                className={`w-full py-2 font-bold rounded shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all
-                  ${submission
-                    ? "bg-emerald-500 hover:bg-emerald-400 text-slate-900"
-                    : "bg-slate-700 text-slate-400 cursor-not-allowed hover:bg-slate-600"
-                  }
-                `}
+                className={`w-full py-2 font-bold rounded shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all bg-emerald-500 hover:bg-emerald-400 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {loading ? (
                   <Loader2 className="animate-spin h-4 w-4" />
@@ -356,7 +435,7 @@ export default function InstructorEvaluation({
                   ? "Saving..."
                   : submission
                     ? "Submit Evaluation"
-                    : "View Only Mode"}
+                    : "Save Manual Evaluation"}
               </button>
             </div>
           </div>

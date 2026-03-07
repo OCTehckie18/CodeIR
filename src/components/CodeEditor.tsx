@@ -122,16 +122,18 @@ export default function CodeEditor({ onNavigate }: CodeEditorProps) {
     }
 
     setIsEvaluating(true);
-    setAiHints(["Evaluating code correctness with local LLM..."]);
+    setAiHints(["Evaluating code correctness..."]);
     setIrOutput("Waiting for validation...");
     setTranslatedCode("Waiting for validation...");
     setValidationStatus("pending");
     setSubmissionSuccess(false);
 
     try {
+      const engine = localStorage.getItem("aiEngine") || "ollama";
       const response = await axios.post("http://127.0.0.1:5000/api/evaluate-code", {
         code,
-        description
+        description,
+        engine
       });
 
       const { success, status, feedback, irOutput: apiIrOutput, translatedCode: apiTranslatedCode, error } = response.data;

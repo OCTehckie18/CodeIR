@@ -8,6 +8,9 @@ export default function AuthForm() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"student" | "instructor">("student");
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const [aiEngine, setAiEngine] = useState<"ollama" | "gemini">(
+    (localStorage.getItem("aiEngine") as "ollama" | "gemini") || "ollama"
+  );
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
@@ -17,6 +20,10 @@ export default function AuthForm() {
   useEffect(() => {
     setMsg(null);
   }, [mode]);
+
+  useEffect(() => {
+    localStorage.setItem("aiEngine", aiEngine);
+  }, [aiEngine]);
 
   const handleAuthAction = async (
     action: "login" | "signup",
@@ -229,10 +236,9 @@ export default function AuthForm() {
                 onClick={(e) => handleAuthAction("login", e)}
                 disabled={loading}
                 className={`flex-1 py-3.5 rounded-lg font-bold text-sm tracking-wide transition-all duration-200 flex items-center justify-center
-                  ${
-                    loading && mode === "login"
-                      ? "bg-cyan-700 cursor-not-allowed"
-                      : "bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] transform hover:-translate-y-0.5"
+                  ${loading && mode === "login"
+                    ? "bg-cyan-700 cursor-not-allowed"
+                    : "bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] transform hover:-translate-y-0.5"
                   }
                 `}
               >
@@ -258,6 +264,25 @@ export default function AuthForm() {
                   "Create Account"
                 )}
               </button>
+            </div>
+
+            <div className="pt-4 animate-fade-in space-y-2 border-t border-slate-800 mt-6">
+              <label className="text-xs uppercase tracking-wider text-slate-500 ml-1 font-semibold">
+                AI Evaluation Engine
+              </label>
+              <div className="relative">
+                <select
+                  className="w-full appearance-none bg-slate-900/30 border border-slate-800 rounded-lg px-4 py-2 text-sm text-slate-400 focus:outline-none focus:border-cyan-500/50 focus:text-slate-300 transition-all cursor-pointer"
+                  value={aiEngine}
+                  onChange={(e) => setAiEngine(e.target.value as "ollama" | "gemini")}
+                >
+                  <option value="ollama">Ollama (Local / CPU)</option>
+                  <option value="gemini">Gemini (Cloud API)</option>
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-600">
+                  <ChevronDown size={14} />
+                </div>
+              </div>
             </div>
 
             {msg && (
