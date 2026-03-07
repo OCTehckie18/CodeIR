@@ -4,7 +4,7 @@
 
 **CodeIR** is a full-stack educational web application designed to bridge the gap between high-level source code and compiler Intermediate Representations (IR). It features a sophisticated dual-role architecture (Student/Instructor) enabling real-time code submission, AI-powered code evaluation, IR visualization, and rubric-based assessment.
 
-The system leverages a **Serverless Database Architecture** via Supabase alongside **Google Gemini 2.5 Flash** for rapid, cloud-based LLM logic. It strictly employs typed **TypeScript** interfaces on the frontend to ensure type safety across the full stack while utilizing delegated Row Level Security (RLS) for comprehensive data protection.
+The system leverages a **Serverless Database Architecture** via Supabase alongside a **Dual AI Engine Architecture** (Google Gemini 2.5 Flash for cloud, and Ollama for secure local CPU inference). It strictly employs typed **TypeScript** interfaces on the frontend to ensure type safety across the full stack while utilizing delegated Row Level Security (RLS) for comprehensive data protection.
 
 ---
 
@@ -42,7 +42,7 @@ graph TD
 
 1. **Monaco Editor Integration:** Utilizes `@monaco-editor/react` to provide VS Code-level editing capabilities (IntelliSense, syntax highlighting) directly in the browser.
 2. **Dedicated Node.js Backend:** Centralizes API logic, protecting the Gemini AI Evaluation pipeline and enforcing sequential relational database updates without exposing sensitive Supabase credentials to the client.
-3. **Gemini AI Evaluation Pipeline:** Integrates with `@google/generative-ai` (Gemini 2.5 Flash) via the backend API to evaluate code correctness, dynamically generate pseudocode (IR), and provide live code translations (Python, Java, C++).
+3. **Dual AI Evaluation Pipeline (Gemini/Ollama):** Integrates with `@google/generative-ai` (Gemini 2.5 Flash) and local `Ollama` models (e.g. `gpt-oss:latest`) via the backend API to evaluate code correctness, dynamically generate pseudocode (IR), and provide live code translations (Python, Java, C++). The AI engine is selectively cached via UI Toggles.
 4. **Dynamic RLS Database Routing:** The backend operates as a dynamic proxy, catching the JWT `access_token` from the frontend to instantiate specialized Supabase clients per request. This ensures all Database CRUD natively obeys Postgres Row-Level Security checks at the server level.
 5. **Tailwind CSS v4:** Adopts the latest CSS-first configuration approach for high-performance atomic styling, utilizing `dvh` units for robust mobile responsiveness.
 6. **Relational Data Mapping:** Shifts from flat tables to a highly normalized PostgreSQL structure (`problems`, `submissions`, `pseudocodes`, `evaluations`) with strict foreign keys to preserve learning traces and auditability.
@@ -79,8 +79,8 @@ graph TD
 
 ### AI & Evaluation Engine
 
-- **LLM Manager:** Google Gemini 2.5 Flash
-- **Features:** Code correctness validation, high-level IR generation, and cross-language translation mappings.
+- **LLM Manager:** Google Gemini 2.5 Flash (Cloud API) & Local Ollama Engine (`gpt-oss:latest`)
+- **Features:** Toggleable AI engine evaluation, Code correctness validation, high-level IR generation, and cross-language translation mappings.
 
 ---
 
@@ -244,18 +244,17 @@ The application determines the UI to render based on user metadata:
 
 ### AI-Powered Code Validation Pipeline
 
-- **Correctness Check:** The student's source code and problem description are forwarded to `Gemini 2.5 Flash` to be validated.
+- **Correctness Check:** The student's source code and problem description are forwarded to either `Gemini` or `Ollama` (based on dashboard state) to be validated.
 - **Dynamic State Safety:** If code is deemed `invalid` or `pending`, the Code Save button adapts gracefully, blocking saving until the user hits a `valid` state or triggers a manual Cancel Reset.
 - **Dynamic IR Generation:** Once validated as `CORRECT`, the code is parsed into structured pseudocode.
 - **Language Translation:** Code is simultaneously translated into Python, Java, and C++ for comparative learning.
 
-### Sandbox Mode
+### Offline Manual Evaluation
 
-If the Instructor view is loaded without a database connection or valid student submission, the system gracefully degrades into **Sandbox Mode**.
+If the Instructor view accesses the evaluation dashboard without a specific student submission (from scratch), the system gracefully enters **Manual Evaluation Mode** (formerly Sandbox Mode).
 
-- **Behavior:** The editor becomes writable for manual testing.
-- **Visual Cue:** A yellow "Sandbox Mode" badge appears in the header.
-- **Submission:** Saving is disabled/mocked to prevent foreign key constraint violations.
+- **Behavior:** The editor is fully writable and functional for manual testing.
+- **Ghost Submissions:** Saving is fully enabled. The backend intercepts the lack of a submission ID, natively authors an offline "Instructor Offline Evaluation" ghost-submission, and securely anchors the rubric grades dynamically back to the database.
 
 ---
 
