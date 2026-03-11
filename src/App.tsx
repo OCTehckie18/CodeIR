@@ -5,7 +5,7 @@ import CodeEditor from "./components/CodeEditor";
 import InstructorEvaluation from "./components/InstructorEvaluation"; // Updated Import
 import InstructorDashboard from "./components/InstructorDashboard"; // New Import
 import StudentDashboard from "./components/StudentDashboard";
-import { Loader2 } from "lucide-react";
+import logo from "./assets/no-bg-white-logo.png";
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -30,7 +30,7 @@ function App() {
     // Just ensure fetching role works as before
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) fetchRole(session.user.id);
+      if (session) fetchRole();
       else setLoading(false);
     });
 
@@ -38,7 +38,7 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) fetchRole(session.user.id);
+      if (session) fetchRole();
       else {
         setRole(null);
         setLoading(false);
@@ -48,7 +48,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchRole = async (userId: string) => {
+  const fetchRole = async () => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -59,7 +59,7 @@ function App() {
   };
 
   if (loading)
-    return <Loader2 className="animate-spin h-10 w-10 text-cyan-500 m-auto" />;
+    return <img src={logo} alt="Loading..." className="animate-float h-16 w-16 opacity-80 m-auto" />;
   if (!session) return <AuthForm />;
 
   // === INSTRUCTOR ROUTING ===

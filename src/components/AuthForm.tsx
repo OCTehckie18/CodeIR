@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { Loader2, Code, Settings, Atom, ChevronDown } from "lucide-react";
+import { Code, Settings, Atom, ChevronDown } from "lucide-react";
 import logo from "../assets/no-bg-white-logo.png";
 
 export default function AuthForm() {
@@ -25,12 +25,15 @@ export default function AuthForm() {
     localStorage.setItem("aiEngine", aiEngine);
   }, [aiEngine]);
 
-  const handleAuthAction = async (
-    action: "login" | "signup",
-    e?: React.FormEvent,
-  ) => {
-    if (e) e.preventDefault();
-    setMode(action);
+  const toggleMode = () => {
+    setMode((prev) => (prev === "login" ? "signup" : "login"));
+    setEmail("");
+    setPassword("");
+    setMsg(null);
+  };
+
+  const handleAuthAction = async (e: React.FormEvent) => {
+    e.preventDefault();
 
     if (!email || !password) {
       setMsg({ type: "error", text: "Please fill in all fields." });
@@ -41,7 +44,7 @@ export default function AuthForm() {
     setMsg(null);
 
     try {
-      if (action === "signup") {
+      if (mode === "signup") {
         // --- SIGNUP LOGIC ---
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -57,12 +60,14 @@ export default function AuthForm() {
         if (data.user && !data.session) {
           setMsg({
             type: "success",
-            text: "Signup initiated. Check email for confirmation.",
+            text: "Signup initiated. Check email for confirmation. Refreshing...",
           });
           setLoading(false); // Stop loading so user can see the message
+          setTimeout(() => window.location.reload(), 2500);
         } else {
           // If session exists immediately (auto-confirm), App.tsx will handle the switch
           setMsg({ type: "success", text: "Account created! Redirecting..." });
+          setTimeout(() => window.location.reload(), 2000);
         }
       } else {
         // --- LOGIN LOGIC ---
@@ -84,117 +89,114 @@ export default function AuthForm() {
   };
 
   return (
-    <div className="flex w-full min-h-dvh lg:h-screen bg-slate-950 text-white overflow-hidden font-sans">
-      {/* ================= LEFT PANEL (Visuals) ================= */}
-      <div className="hidden lg:flex w-1/2 h-full relative flex-col justify-center items-center bg-gradient-to-br from-blue-900 via-slate-900 to-black p-12 overflow-hidden">
-        {/* Background Ambient Glow */}
-        <div className="absolute top-[-20%] left-[-20%] w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
+    <div className="flex w-full min-h-dvh lg:h-screen bg-[#050510] relative text-slate-900 dark:text-white overflow-hidden font-sans">
+      {/* Dynamic Background Effects */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyan-600/10 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-blue-800/10 blur-[150px] pointer-events-none" />
+      <div className="absolute top-[20%] right-[30%] w-[30vw] h-[30vw] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col items-center text-center space-y-12 w-full max-w-lg">
-          {/* Logo Placeholder */}
-          <div className="flex items-center gap-3 group cursor-default h-full w-full">
-            <img
-              src={logo}
-              alt="CodeIR Logo"
-              className="h-full w-full object-contain drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] group-hover:scale-105 transition-transform duration-300"
-            />
+      {/* Grid Pattern overlay for tech feel */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHBhdGggZD0iTTAgMGg0MHY0MEgwVjB6bTIwIDIwaDIwdjIwSDIweiIgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIwLjAyIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz48L3N2Zz4=')] opacity-20 pointer-events-none mix-blend-overlay"></div>
+
+      {/* Decorative large logo in background */}
+      <img
+        src={logo}
+        alt=""
+        className="absolute -left-32 top-1/2 -translate-y-1/2 w-[800px] opacity-[0.03] rotate-[-15deg] pointer-events-none"
+      />
+
+      {/* ================= LEFT PANEL (Hero / Features) ================= */}
+      <div className="hidden lg:flex w-1/2 h-full relative flex-col justify-center items-start p-16 xl:p-24 overflow-hidden z-10">
+
+        <div className="mb-10 w-full max-w-xl">
+          <div className="flex items-center gap-4 mb-8">
+            <img src={logo} alt="CodeIR Logo" className="h-12 w-auto drop-shadow-[0_0_15px_rgba(6,182,212,0.8)]" />
+            <span className="text-3xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">| CodeIR</span>
           </div>
 
-          {/* Graphic Cards */}
-          <div className="w-full space-y-5">
-            {[
-              { Icon: Code, glow: "top", name: "Code" },
-              { Icon: Settings, glow: "middle", name: "Re-invent" },
-              { Icon: Atom, glow: "bottom", name: "Evaluate" },
-            ].map((Item, idx) => (
-              <div
-                key={idx}
-                className="group relative flex items-center justify-between p-5 xl:p-6 rounded-2xl border border-cyan-500/30 bg-slate-900/40 backdrop-blur-md shadow-[0_0_30px_rgba(6,182,212,0.1)] transition-all duration-300 hover:shadow-[0_0_50px_rgba(6,182,212,0.25)] hover:border-cyan-400/60 hover:-translate-y-1"
-              >
-                <span className="text-xl xl:text-2xl font-semibold text-white tracking-wide">
-                  {Item.name}
-                </span>
-                <div className="p-2 bg-white/10 rounded-lg group-hover:bg-white/20 transition-colors">
-                  <Item.Icon className="w-6 h-6 xl:w-8 xl:h-8 text-cyan-400" />
-                </div>
-                <div
-                  className={`absolute top-[-1px] left-1/2 -translate-x-1/2 w-1/3 h-[2px] bg-cyan-400 rounded-full blur-[2px] shadow-[0_0_10px_cyan] opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
-                />
+          <h1 className="text-5xl xl:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
+            Next-Gen Code <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Evaluation Engine</span>
+          </h1>
+          <p className="text-lg xl:text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed font-light">
+            An intelligent platform offering real-time code evaluation, AI-driven insights with multiple models, and seamless collaboration between students and instructors.
+          </p>
+        </div>
+
+        {/* Feature Cards in Glassmorphism */}
+        <div className="grid grid-cols-1 gap-4 w-full max-w-xl">
+          {[
+            { Icon: Code, title: "Intelligent Coding", desc: "Write, test, and instantly evaluate code within an interactive environment." },
+            { Icon: Settings, title: "Multi-Model AI", desc: "Powered by edge-local Ollama and scalable cloud Gemini API." },
+            { Icon: Atom, title: "Real-time Metrics", desc: "Get comprehensive evaluation reports and instructor feedback." },
+          ].map((Item, idx) => (
+            <div
+              key={idx}
+              className="group relative flex items-center gap-5 p-5 rounded-2xl border border-white/5 bg-white/[0.02] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all duration-300 hover:bg-white/[0.04] hover:border-cyan-500/30 hover:-translate-y-1"
+            >
+              <div className="p-3 bg-cyan-500/10 rounded-xl group-hover:bg-cyan-500/20 transition-colors shadow-[inset_0_0_10px_rgba(6,182,212,0.1)]">
+                <Item.Icon className="w-6 h-6 text-cyan-400" />
               </div>
-            ))}
-          </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-wide mb-1">{Item.title}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">{Item.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* ================= RIGHT PANEL (Form) ================= */}
-      <div className="flex w-full lg:w-1/2 h-full items-center justify-center p-6 sm:p-12 relative overflow-y-auto bg-slate-950">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950 lg:hidden pointer-events-none" />
+      <div className="flex w-full lg:w-1/2 h-full items-center justify-center p-6 sm:p-12 relative z-10 overflow-y-auto">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/10 via-transparent to-transparent lg:hidden pointer-events-none" />
 
-        <div className="relative z-10 w-full max-w-[380px] space-y-8">
-          <div className="flex flex-col items-center justify-center mb-8 sm:mb-12">
-            {/* RESPONSIVE LOGO: Shows only on mobile/tablet (hidden on lg+) */}
+        {/* Glassmorphism Form Container */}
+        <div className="w-full max-w-[420px] p-8 sm:p-10 rounded-[2rem] border border-black/10 dark:border-white/10 bg-white/[0.03] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative">
+
+          {/* Subtle inner highlight */}
+          <div className="absolute inset-0 rounded-[2rem] border border-white/5 pointer-events-none mix-blend-overlay"></div>
+
+          <div className="flex flex-col items-center justify-center mb-8 relative z-10">
+            {/* RESPONSIVE LOGO: Shows only on mobile */}
             <img
               src={logo}
               alt="CodeIR Logo"
-              className="lg:hidden h-full w-auto object-contain mb-6 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] animate-fade-in"
+              className="lg:hidden h-16 w-auto object-contain mb-6 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] animate-fade-in"
             />
 
-            {/* code for Ui element */}
-            {/* RESPONSIVE ICONS ROW: Visible ONLY on mobile (lg:hidden) */}
-            <div className="flex justify-center gap-6 mb-10 lg:hidden animate-fade-in w-full px-4">
-              {[
-                { Icon: Code, glow: "top" },
-                { Icon: Settings, glow: "middle" },
-                { Icon: Atom, glow: "bottom" },
-              ].map((Item, idx) => (
-                <div
-                  key={idx}
-                  // Outer container: Border, shadow, and lift effect on hover
-                  className="group relative flex items-center justify-center p-2 rounded-xl border border-cyan-500/30 bg-slate-900/40 backdrop-blur-md shadow-[0_0_15px_rgba(6,182,212,0.1)] transition-all duration-300 hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:border-cyan-400/60 hover:-translate-y-2"
-                >
-                  {/* Inner container: Icon and background color change on hover */}
-                  <div className="p-3 bg-white/10 rounded-lg group-hover:bg-white/20 transition-colors">
-                    <Item.Icon className="w-7 h-7 text-cyan-400" />
-                  </div>
-
-                  {/* Top Glow Line Effect */}
-                  <div className="absolute top-[-1px] left-1/2 -translate-x-1/2 w-3/5 h-[2px] bg-cyan-400 rounded-full blur-[2px] shadow-[0_0_15px_cyan] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                </div>
-              ))}
-            </div>
-
-            {/* ... Followed by your "Welcome Back" text ... */}
-
-            <div className="animate-fade-in-up text-center">
-              <p className="text-lg xl:text-xl tracking-[0.2em] text-slate-300 font-light uppercase">
+            <div className="animate-fade-in-up text-center w-full">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
                 {mode === "login" ? "Welcome Back" : "Create Account"}
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                {mode === "login" ? "Enter your credentials to access your workspace." : "Sign up to start evaluating your code intelligently."}
               </p>
             </div>
           </div>
 
-          <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-            <div className="space-y-1">
-              <label className="text-xs uppercase tracking-wider text-slate-500 ml-1 font-semibold">
+          <form className="space-y-5 relative z-10" onSubmit={handleAuthAction}>
+            <div className="space-y-1.5">
+              <label className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1 font-semibold">
                 Email
               </label>
               <input
                 type="email"
                 placeholder="name@example.com"
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3.5 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:bg-slate-900/80 transition-all shadow-inner"
+                className="w-full bg-black/20 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3.5 text-slate-800 dark:text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 focus:bg-black/40 transition-all shadow-inner"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs uppercase tracking-wider text-slate-500 ml-1 font-semibold">
+            <div className="space-y-1.5">
+              <label className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1 font-semibold">
                 Password
               </label>
               <input
                 type="password"
                 placeholder="••••••••"
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3.5 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:bg-slate-900/80 transition-all shadow-inner"
+                className="w-full bg-black/20 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3.5 text-slate-800 dark:text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 focus:bg-black/40 transition-all shadow-inner"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
@@ -203,83 +205,73 @@ export default function AuthForm() {
 
             {/* Role is only useful during Signup */}
             {mode === "signup" && (
-              <div className="space-y-1 animate-fade-in">
-                <label className="text-xs uppercase tracking-wider text-slate-500 ml-1 font-semibold">
+              <div className="space-y-1.5 animate-fade-in">
+                <label className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1 font-semibold">
                   Role
                 </label>
                 <div className="relative">
                   <select
-                    className="w-full appearance-none bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3.5 text-slate-200 focus:outline-none focus:border-cyan-500 focus:bg-slate-900/80 transition-all cursor-pointer shadow-inner"
+                    className="w-full appearance-none bg-black/20 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-cyan-500/50 focus:bg-black/40 transition-all cursor-pointer shadow-inner"
                     value={role}
                     onChange={(e) =>
                       setRole(e.target.value as "student" | "instructor")
                     }
                     disabled={loading}
                   >
-                    <option value="student" className="bg-slate-900">
-                      Student
-                    </option>
-                    <option value="instructor" className="bg-slate-900">
-                      Instructor
-                    </option>
+                    <option value="student" className="bg-[#0f172a]">Student</option>
+                    <option value="instructor" className="bg-[#0f172a]">Instructor</option>
                   </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-600 dark:text-slate-400">
                     <ChevronDown size={18} />
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex flex-col gap-4 pt-4">
               <button
-                type="button"
-                onClick={(e) => handleAuthAction("login", e)}
+                type="submit"
                 disabled={loading}
-                className={`flex-1 py-3.5 rounded-lg font-bold text-sm tracking-wide transition-all duration-200 flex items-center justify-center
-                  ${loading && mode === "login"
-                    ? "bg-cyan-700 cursor-not-allowed"
-                    : "bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] transform hover:-translate-y-0.5"
+                className={`w-full py-3.5 rounded-xl font-semibold text-sm tracking-wide transition-all duration-300 flex items-center justify-center
+                  ${loading
+                    ? "bg-cyan-700/50 text-slate-900 dark:text-white cursor-not-allowed"
+                    : "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-900 dark:text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transform hover:-translate-y-0.5"
                   }
                 `}
               >
-                {loading && mode === "login" ? (
-                  <Loader2 className="animate-spin w-5 h-5 text-white" />
-                ) : (
+                {loading ? (
+                  <img src={logo} alt="Loading" className="animate-float w-6 h-6 object-contain" />
+                ) : mode === "login" ? (
                   "Login"
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) => handleAuthAction("signup", e)}
-                disabled={loading}
-                className={`flex-1 py-3.5 rounded-lg font-bold text-sm tracking-wide border transition-all duration-200 flex items-center justify-center
-                   border-slate-600 text-slate-400 hover:text-white hover:bg-white/5 hover:border-slate-400
-                   ${loading && mode === "signup" ? "opacity-70 cursor-not-allowed" : ""}
-                `}
-              >
-                {loading && mode === "signup" ? (
-                  <Loader2 className="animate-spin w-5 h-5" />
                 ) : (
                   "Create Account"
                 )}
               </button>
+
+              <button
+                type="button"
+                onClick={toggleMode}
+                disabled={loading}
+                className="text-sm text-slate-600 dark:text-slate-400 hover:text-cyan-400 transition-colors text-center w-full font-medium"
+              >
+                {mode === "login" ? "Don't have an account? Sign up" : "Already have an account? Log in"}
+              </button>
             </div>
 
-            <div className="pt-4 animate-fade-in space-y-2 border-t border-slate-800 mt-6">
-              <label className="text-xs uppercase tracking-wider text-slate-500 ml-1 font-semibold">
-                AI Evaluation Engine
+            <div className="pt-6 animate-fade-in space-y-2 border-t border-black/10 dark:border-white/10 mt-6 relative z-10">
+              <label className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1 font-semibold flex items-center gap-2">
+                <Atom size={14} className="text-cyan-400" /> AI Evaluation Engine
               </label>
               <div className="relative">
                 <select
-                  className="w-full appearance-none bg-slate-900/30 border border-slate-800 rounded-lg px-4 py-2 text-sm text-slate-400 focus:outline-none focus:border-cyan-500/50 focus:text-slate-300 transition-all cursor-pointer"
+                  className="w-full appearance-none bg-black/20 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-cyan-500/50 focus:bg-black/40 transition-all cursor-pointer shadow-inner"
                   value={aiEngine}
                   onChange={(e) => setAiEngine(e.target.value as "ollama" | "gemini")}
                 >
-                  <option value="ollama">Ollama (Local / CPU)</option>
-                  <option value="gemini">Gemini (Cloud API)</option>
+                  <option value="ollama" className="bg-[#0f172a]">Ollama (Local / CPU)</option>
+                  <option value="gemini" className="bg-[#0f172a]">Gemini (Cloud API)</option>
                 </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-600">
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 dark:text-slate-500">
                   <ChevronDown size={14} />
                 </div>
               </div>
@@ -287,16 +279,17 @@ export default function AuthForm() {
 
             {msg && (
               <div
-                className={`mt-4 text-center text-sm p-3 rounded-lg border backdrop-blur-sm animate-fade-in ${msg.type === "success" ? "text-green-300 border-green-800 bg-green-900/30" : "text-red-300 border-red-800 bg-red-900/30"}`}
+                className={`mt-4 text-center text-sm p-3 rounded-xl border backdrop-blur-md animate-fade-in ${msg.type === "success" ? "text-green-300 border-green-500/30 bg-green-500/10" : "text-red-300 border-red-500/30 bg-red-500/10"}`}
               >
                 {msg.text}
               </div>
             )}
           </form>
 
-          <div className="pt-6 text-center">
-            <p className="text-slate-600 text-xs font-medium uppercase tracking-widest">
-              *In Development Phase
+          <div className="pt-6 text-center relative z-10">
+            <p className="text-slate-500 dark:text-slate-500 text-xs font-semibold uppercase tracking-widest flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
+              In Development Phase
             </p>
           </div>
         </div>
