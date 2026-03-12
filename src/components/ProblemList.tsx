@@ -8,7 +8,8 @@ import {
   Trash2,
   Play,
   BookOpen,
-  Filter
+  Filter,
+  Search
 } from "lucide-react";
 
 interface Problem {
@@ -38,6 +39,8 @@ export default function ProblemList({ role, onNavigate, onSelectProblem }: Probl
     difficulty_level: "Easy"
   });
   const [user, setUser] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterDifficulty, setFilterDifficulty] = useState<"All" | "Easy" | "Medium" | "Hard">("All");
 
   useEffect(() => {
     fetchProblems();
@@ -45,6 +48,13 @@ export default function ProblemList({ role, onNavigate, onSelectProblem }: Probl
       setUser(data.session?.user || null);
     });
   }, []);
+
+  const filteredProblems = problems.filter((problem) => {
+    const matchesSearch = problem.title?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          problem.problem_statement?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesDifficulty = filterDifficulty === "All" || problem.difficulty_level === filterDifficulty;
+    return matchesSearch && matchesDifficulty;
+  });
 
   const fetchProblems = async () => {
     setLoading(true);
@@ -148,10 +158,34 @@ export default function ProblemList({ role, onNavigate, onSelectProblem }: Probl
               {role === "instructor" ? "Manage coding problems for students." : "Select a problem to start coding and testing."}
             </p>
           </div>
-          <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-white/[0.04] rounded-lg hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 transition-colors border border-black/10 dark:border-white/10 text-sm font-medium">
-              <Filter size={16} /> Filter
-            </button>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search Input */}
+            <div className="flex items-center gap-2 bg-white/[0.04] border border-black/10 dark:border-white/5 rounded-xl px-3 py-1.5 transition-all focus-within:border-cyan-500/50">
+              <Search size={16} className="text-slate-500" />
+              <input 
+                type="text" 
+                placeholder="Search problems..."
+                className="bg-transparent border-none outline-none text-xs text-slate-800 dark:text-slate-200 w-32 md:w-48 placeholder:text-slate-500"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Difficulty Filter */}
+            <div className="flex items-center gap-2 bg-white/[0.04] border border-black/10 dark:border-white/5 rounded-xl px-2.5 py-1.5 hover:bg-white/[0.08] transition-colors">
+              <Filter size={14} className="text-slate-500" />
+              <select 
+                className="bg-transparent border-none outline-none text-xs text-slate-800 dark:text-slate-200 font-medium cursor-pointer appearance-none pr-4"
+                value={filterDifficulty}
+                onChange={(e) => setFilterDifficulty(e.target.value as any)}
+              >
+                <option value="All" className="bg-slate-50 dark:bg-slate-900">All Levels</option>
+                <option value="Easy" className="bg-slate-50 dark:bg-slate-900 text-emerald-400">Easy</option>
+                <option value="Medium" className="bg-slate-50 dark:bg-slate-900 text-yellow-400">Medium</option>
+                <option value="Hard" className="bg-slate-50 dark:bg-slate-900 text-red-400">Hard</option>
+              </select>
+            </div>
+
             {role === "instructor" && (
               <button
                 onClick={() => {
@@ -161,7 +195,7 @@ export default function ProblemList({ role, onNavigate, onSelectProblem }: Probl
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg transition-all shadow-lg hover:-translate-y-0.5 text-sm"
               >
-                <Plus size={16} /> Create Problem
+                <Plus size={16} /> Create
               </button>
             )}
           </div>
@@ -170,7 +204,7 @@ export default function ProblemList({ role, onNavigate, onSelectProblem }: Probl
         {/* PROBLEM LIST GRID */}
         {!showForm ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
-            {problems.map((problem) => (
+            {filteredProblems.map((problem) => (
               <div key={problem.problem_id} className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-lg flex flex-col group hover:border-cyan-500/30 transition-all flex flex-col h-full relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 blur-[50px] rounded-full pointer-events-none group-hover:bg-cyan-500/10 transition-colors"></div>
                 
@@ -215,12 +249,15 @@ export default function ProblemList({ role, onNavigate, onSelectProblem }: Probl
               </div>
             ))}
             
-            {problems.length === 0 && (
-              <div className="col-span-full py-20 text-center text-slate-500 dark:text-slate-400 border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center">
+            {filteredProblems.length === 0 && (
+              <div className="col-span-full py-20 text-center text-slate-500 dark:text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center bg-white/[0.01]">
                 <BookOpen size={48} className="mb-4 text-slate-300 dark:text-slate-700" />
                 <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">No Problems Found</h3>
-                <p className="mt-1">
-                  {role === "instructor" ? "Click 'Create Problem' to add your first coding challenge." : "Your instructor hasn't added any problems yet."}
+                <p className="px-6 py-2 text-sm text-slate-500 dark:text-slate-500 max-w-md">
+                  {searchQuery || filterDifficulty !== 'All' 
+                    ? "We couldn't find any problems matching your search or filter criteria. Try adjusting your search or difficulty level."
+                    : (role === "instructor" ? "You haven't created any problems yet. Click 'Create' to add your first challenge." : "Your instructor hasn't added any problems yet.")
+                  }
                 </p>
               </div>
             )}

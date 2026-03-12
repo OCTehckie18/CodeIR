@@ -23,6 +23,9 @@ export default function InstructorDashboard({
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ pending: 0, evaluated: 0, total: 0 });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "evaluated">("all");
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -61,6 +64,22 @@ export default function InstructorDashboard({
       setLoading(false);
     }
   };
+
+  const filteredSubmissions = submissions.filter((sub) => {
+    const evalObj = sub.evaluations ? (Array.isArray(sub.evaluations) ? sub.evaluations[0] : sub.evaluations) : null;
+    const isEvaluated = !!evalObj && !!evalObj.final_scores;
+    
+    // Status Filter
+    if (filterStatus === "pending" && isEvaluated) return false;
+    if (filterStatus === "evaluated" && !isEvaluated) return false;
+
+    // Search Query (Student ID or Problem Statement)
+    const searchLower = searchQuery.toLowerCase();
+    const studentIdMatch = sub.user_id.toLowerCase().includes(searchLower);
+    const problemMatch = sub.problems?.problem_statement?.toLowerCase().includes(searchLower);
+    
+    return studentIdMatch || problemMatch;
+  });
 
   // Logout now handled by NavBar
 
@@ -168,17 +187,36 @@ export default function InstructorDashboard({
 
             {/* --- BOTTOM: STUDENT TABLE --- */}
             <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-lg overflow-hidden flex flex-col flex-1 min-h-[400px]">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 tracking-wide">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 tracking-wide whitespace-nowrap">
                    Active Submissions
                 </h3>
-                <div className="flex gap-2">
-                  <button className="p-2 bg-white/[0.04] rounded-lg hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 transition-colors border border-white/5">
-                    <Search size={16} />
-                  </button>
-                  <button className="p-2 bg-white/[0.04] rounded-lg hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 transition-colors border border-white/5">
-                    <Filter size={16} />
-                  </button>
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                  {/* Search Input Container */}
+                  <div className={`flex items-center gap-2 bg-white/[0.04] border border-white/5 rounded-xl px-3 py-1.5 transition-all duration-300 overflow-hidden ${isSearchVisible ? 'w-full md:w-64 opacity-100' : 'w-10 opacity-0 md:opacity-100 md:w-10'}`}>
+                    <Search size={16} className="text-slate-500 shrink-0" onClick={() => setIsSearchVisible(!isSearchVisible)} />
+                    <input 
+                      type="text" 
+                      placeholder="Search Student ID or Problem..."
+                      className={`bg-transparent border-none outline-none text-xs text-slate-300 w-full placeholder:text-slate-600 transition-opacity duration-300 ${isSearchVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  
+                  {/* Filter Dropdown */}
+                  <div className="flex items-center gap-2 bg-white/[0.04] border border-white/5 rounded-xl px-2 py-1.5 hover:bg-white/[0.08] transition-colors">
+                    <Filter size={14} className="text-slate-500" />
+                    <select 
+                      className="bg-transparent border-none outline-none text-xs text-slate-300 font-medium cursor-pointer appearance-none pr-4"
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value as any)}
+                    >
+                      <option value="all" className="bg-slate-900">All Status</option>
+                      <option value="pending" className="bg-slate-900">Pending</option>
+                      <option value="evaluated" className="bg-slate-900">Evaluated</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -195,7 +233,7 @@ export default function InstructorDashboard({
                     </tr>
                   </thead>
                   <tbody>
-                    {submissions.map((sub) => {
+                    {filteredSubmissions.map((sub) => {
                       const evalObj = sub.evaluations ? (Array.isArray(sub.evaluations) ? sub.evaluations[0] : sub.evaluations) : null;
                       const isEvaluated = !!evalObj && !!evalObj.final_scores;
                       const score = isEvaluated
@@ -258,10 +296,10 @@ export default function InstructorDashboard({
                         </tr>
                       );
                     })}
-                    {submissions.length === 0 && (
+                    {filteredSubmissions.length === 0 && (
                       <tr>
                         <td colSpan={6} className="py-12 text-center text-slate-500 dark:text-slate-500 font-medium bg-white/[0.01] rounded-xl">
-                          No submissions available. 
+                          {searchQuery || filterStatus !== 'all' ? "No submissions match your criteria." : "No submissions available."}
                         </td>
                       </tr>
                     )}

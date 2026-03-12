@@ -16,15 +16,15 @@ import logo from "../assets/no-bg-white-logo.png";
 import NavBar from "./NavBar";
 import ReviewComments from "./ReviewComments";
 
-// 1. Define the Props Interface ensuring onBack is required
+// 1. Define the Props Interface
 interface InstructorEvaluationProps {
   submissionId?: string;
-  onBack: () => void;
+  onNavigate: (view: any) => void;
 }
 
 export default function InstructorEvaluation({
   submissionId,
-  onBack,
+  onNavigate,
 }: InstructorEvaluationProps) {
   const [loading, setLoading] = useState(false);
   const [isAutoGrading, setIsAutoGrading] = useState(false);
@@ -200,7 +200,7 @@ export default function InstructorEvaluation({
       }
 
       alert(submission ? "Evaluation saved successfully!" : "Offline Evaluation & Submission securely saved to database!");
-      onBack();
+      onNavigate("dashboard");
     } catch (error: any) {
       alert("Error saving evaluation: " + (error.response?.data?.error || error.message));
       console.error(error);
@@ -211,14 +211,11 @@ export default function InstructorEvaluation({
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden">
-      {/* SHARED NAV BAR — onBack maps to 'dashboard' navigate */}
+      {/* SHARED NAV BAR */}
       <NavBar
         role="instructor"
         active="evaluation"
-        onNavigate={(_view) => {
-          // All navigation from Evaluation goes back through onBack to App.tsx
-          onBack();
-        }}
+        onNavigate={onNavigate}
         email={user?.email}
       />
       {/* Manual Mode indicator shown below navbar when no submission ID */}

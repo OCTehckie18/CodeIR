@@ -79,9 +79,9 @@ function App() {
       return (
         <InstructorEvaluation
           submissionId={selectedSubmissionId}
-          onBack={() => {
-            setInstructorView("dashboard");
-            setSelectedSubmissionId(undefined);
+          onNavigate={(view) => {
+            setInstructorView(view);
+            if (view !== "evaluation") setSelectedSubmissionId(undefined);
           }}
         />
       );
