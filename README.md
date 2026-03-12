@@ -4,7 +4,7 @@
 
 **CodeIR** is a full-stack educational web application designed to bridge the gap between high-level source code and compiler Intermediate Representations (IR). It features a sophisticated dual-role architecture (Student/Instructor) enabling real-time code submission, AI-powered code evaluation, IR visualization, rubric-based assessment, user profile management, and granular per-line code review comments.
 
-The system leverages a **Serverless Database Architecture** via Supabase alongside a **Dual AI Engine Architecture** (Google Gemini 2.5 Flash for cloud, and Ollama for secure local CPU inference). It strictly employs typed **TypeScript** interfaces on the frontend to ensure type safety across the full stack while utilizing delegated Row Level Security (RLS) for comprehensive data protection.
+The system leverages a **Serverless Database Architecture** via Supabase alongside a **Dual AI Engine Architecture** (Google Gemini 1.5 Flash for cloud, and Ollama for secure local CPU inference). It strictly employs typed **TypeScript** interfaces on the frontend to ensure type safety across the full stack while utilizing delegated Row Level Security (RLS) for comprehensive data protection.
 
 ---
 
@@ -49,7 +49,7 @@ graph TD
 
 1. **Monaco Editor Integration:** Utilizes `@monaco-editor/react` to provide VS Code-level editing capabilities (IntelliSense, syntax highlighting) directly in the browser.
 2. **Dedicated Node.js Backend:** Centralizes API logic, protecting the Gemini AI pipeline and enforcing sequential relational database updates without exposing sensitive Supabase credentials to the client.
-3. **Dual AI Evaluation Pipeline (Gemini/Ollama):** Integrates with `@google/generative-ai` (Gemini 2.5 Flash) and local `Ollama` models via the backend API to evaluate code correctness, generate pseudocode (IR), and produce cross-language translations (Python, Java, C++).
+3. **Dual AI Evaluation Pipeline (Gemini/Ollama):** Integrates with `@google/generative-ai` (Gemini 1.5 Flash) and local `Ollama` models via the backend API to evaluate code correctness, generate pseudocode (IR), and produce cross-language translations (Python, Java, C++).
 4. **Dual Supabase Client Strategy:** The backend maintains two Supabase clients — an **admin client** (service role key, bypasses RLS) for system-level operations like sandbox problem creation, and an **auth-delegated client** (user JWT) for student-owned data ensuring RLS is enforced per-user.
 5. **Tailwind CSS v4:** Adopts the latest CSS-first configuration approach for high-performance atomic styling, utilizing `dvh` units for robust mobile responsiveness.
 6. **Relational Data Mapping:** Highly normalized PostgreSQL structure (`problems`, `submissions`, `pseudocodes`, `evaluations`, `review_comments`) with strict foreign keys to preserve learning traces and auditability.
@@ -89,7 +89,7 @@ graph TD
 
 ### AI & Evaluation Engine
 
-- **LLM Manager:** Google Gemini 2.5 Flash (Cloud API) & Local Ollama Engine (`gpt-oss:latest`)
+- **LLM Manager:** Google Gemini 1.5 Flash (Cloud API) & Local Ollama Engine (`qwen2.5-coder:7b`)
 - **Features:** Toggleable AI engine, code correctness validation, high-level IR generation, cross-language translation.
 
 ---
