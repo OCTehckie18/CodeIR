@@ -14,6 +14,9 @@ import {
   FileCode,
   Trash2,
   Settings,
+  Plus,
+  Check,
+  X,
 } from "lucide-react";
 
 export default function StudentDashboard({
@@ -34,6 +37,46 @@ export default function StudentDashboard({
   });
   const [calendarData, setCalendarData] = useState<any[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // --- Manual Skills State ---
+  const [skills, setSkills] = useState(() => {
+    const saved = localStorage.getItem("student_skills");
+    return saved ? JSON.parse(saved) : [
+      { name: "Problem Solver", color: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" },
+      { name: "JS Enthusiast", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+      { name: "Consistency", color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
+      { name: "Pythonista", color: "bg-pink-500/10 text-pink-400 border-pink-500/20" },
+    ];
+  });
+  const [showAddSkill, setShowAddSkill] = useState(false);
+  const [newSkillName, setNewSkillName] = useState("");
+
+  const skillColorPalette = [
+    "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+    "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    "bg-pink-500/10 text-pink-400 border-pink-500/20",
+    "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
+    "bg-orange-500/10 text-orange-400 border-orange-500/20",
+    "bg-rose-500/10 text-rose-400 border-rose-500/20",
+    "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+    "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  ];
+
+  useEffect(() => {
+    localStorage.setItem("student_skills", JSON.stringify(skills));
+  }, [skills]);
+
+  const handleAddSkill = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newSkillName.trim()) {
+      const randomColor = skillColorPalette[Math.floor(Math.random() * skillColorPalette.length)];
+      setSkills([...skills, { name: newSkillName.trim(), color: randomColor }]);
+      setNewSkillName("");
+      setShowAddSkill(false);
+    }
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -258,8 +301,8 @@ export default function StudentDashboard({
       {/* SHARED NAV BAR */}
       <NavBar role="student" active="dashboard" onNavigate={onNavigate} email={user?.email} />
 
-      <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto p-4 lg:p-6 custom-scrollbar">
-        <div className="flex flex-col lg:flex-row gap-6 w-full min-h-full">
+      <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
+        <div className="flex flex-col lg:flex-row gap-6 w-full min-h-full p-4 lg:p-6">
           {/* ================= LEFT PANEL (Profile - LeetCode Style) ================= */}
           <div className="w-full lg:w-[320px] flex-shrink-0 flex flex-col gap-5">
             {/* Profile Card */}
@@ -323,12 +366,41 @@ export default function StudentDashboard({
 
             {/* Badges/Skills Card */}
             <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-lg">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 tracking-wide">Badges & Skills</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 tracking-wide">Badges & Skills</h3>
+                <button 
+                  onClick={() => setShowAddSkill(!showAddSkill)}
+                  className="p-1 rounded-full hover:bg-white/5 text-slate-500 hover:text-cyan-400 transition-colors"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              
               <div className="flex flex-wrap gap-2.5">
-                <span className="px-3 py-1 bg-yellow-500/10 text-yellow-400 text-xs font-medium rounded-full border border-yellow-500/20 shadow-sm">Problem Solver</span>
-                <span className="px-3 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-full border border-blue-500/20 shadow-sm">JS Enthusiast</span>
-                <span className="px-3 py-1 bg-purple-500/10 text-purple-400 text-xs font-medium rounded-full border border-purple-500/20 shadow-sm">Consistency</span>
-                <span className="px-3 py-1 bg-pink-500/10 text-pink-400 text-xs font-medium rounded-full border border-pink-500/20 shadow-sm">Pythonista</span>
+                {skills.map((skill: any, idx: number) => (
+                  <span key={idx} className={`px-3 py-1 ${skill.color} text-xs font-medium rounded-full border shadow-sm`}>
+                    {skill.name}
+                  </span>
+                ))}
+                
+                {showAddSkill && (
+                  <form onSubmit={handleAddSkill} className="flex items-center gap-1.5 animate-in fade-in slide-in-from-left-2 duration-300">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={newSkillName}
+                      onChange={(e) => setNewSkillName(e.target.value)}
+                      placeholder="Add skill..."
+                      className="bg-slate-900/50 border border-white/10 rounded-full px-3 py-0.5 text-xs text-white outline-none focus:border-cyan-500/50 w-24 sm:w-32 transition-all"
+                    />
+                    <button type="submit" className="text-emerald-400 hover:text-emerald-300 transition-colors">
+                      <Check size={14} />
+                    </button>
+                    <button type="button" onClick={() => { setShowAddSkill(false); setNewSkillName(""); }} className="text-rose-400 hover:text-rose-300 transition-colors">
+                      <X size={14} />
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
           </div>

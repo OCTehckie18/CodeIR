@@ -99,8 +99,8 @@ export default function InstructorDashboard({
       {/* SHARED NAV BAR */}
       <NavBar role="instructor" active="dashboard" onNavigate={onNavigate} email={user?.email} />
 
-      <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto p-4 lg:p-6 custom-scrollbar">
-        <div className="flex flex-col lg:flex-row gap-6 w-full min-h-full">
+      <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
+        <div className="flex flex-col lg:flex-row gap-6 w-full min-h-full p-4 lg:p-6">
           {/* === LEFT PANEL: PROFILE === */}
           <div className="w-full lg:w-[320px] flex-shrink-0 flex flex-col gap-5">
             <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-6 flex flex-col shadow-lg relative overflow-hidden group">
