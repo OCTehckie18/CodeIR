@@ -6,7 +6,9 @@ import InstructorEvaluation from "./components/InstructorEvaluation"; // Updated
 import InstructorDashboard from "./components/InstructorDashboard"; // New Import
 import StudentDashboard from "./components/StudentDashboard";
 import ProblemList from "./components/ProblemList"; // New Import
-import logo from "./assets/no-bg-white-logo.png";
+import PageLoader from "./components/PageLoader";
+
+
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -60,8 +62,8 @@ function App() {
     setLoading(false);
   };
 
-  if (loading)
-    return <img src={logo} alt="Loading..." className="animate-float h-16 w-16 opacity-80 m-auto" />;
+  if (loading) return <PageLoader message="Authenticating..." />;
+
   if (!session) return <AuthForm />;
 
   // === INSTRUCTOR ROUTING ===
