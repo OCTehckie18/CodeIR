@@ -5,6 +5,7 @@ import CodeEditor from "./components/CodeEditor";
 import InstructorEvaluation from "./components/InstructorEvaluation"; // Updated Import
 import InstructorDashboard from "./components/InstructorDashboard"; // New Import
 import StudentDashboard from "./components/StudentDashboard";
+import ProblemList from "./components/ProblemList"; // New Import
 import logo from "./assets/no-bg-white-logo.png";
 
 function App() {
@@ -13,13 +14,14 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   // VIEW STATES
-  const [studentView, setStudentView] = useState<"editor" | "dashboard">(
+  const [studentView, setStudentView] = useState<"editor" | "dashboard" | "problems">(
     "dashboard",
   );
+  const [selectedProblem, setSelectedProblem] = useState<any>(null); // To pass problem to editor
 
   // INSTRUCTOR STATES
   const [instructorView, setInstructorView] = useState<
-    "dashboard" | "evaluation"
+    "dashboard" | "evaluation" | "problems"
   >("dashboard");
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<
     string | undefined
@@ -73,7 +75,7 @@ function App() {
           }}
         />
       );
-    } else {
+    } else if (instructorView === "evaluation") {
       return (
         <InstructorEvaluation
           submissionId={selectedSubmissionId}
@@ -83,6 +85,10 @@ function App() {
           }}
         />
       );
+    } else if (instructorView === "problems") {
+      return (
+        <ProblemList role="instructor" onNavigate={setInstructorView} />
+      );
     }
   }
 
@@ -91,8 +97,17 @@ function App() {
     <div>
       {studentView === "dashboard" ? (
         <StudentDashboard onNavigate={setStudentView} />
+      ) : studentView === "problems" ? (
+        <ProblemList
+          role="student"
+          onNavigate={setStudentView}
+          onSelectProblem={(problem) => {
+            setSelectedProblem(problem);
+            setStudentView("editor");
+          }}
+        />
       ) : (
-        <CodeEditor onNavigate={setStudentView} />
+        <CodeEditor onNavigate={setStudentView} problem={selectedProblem} />
       )}
     </div>
   );
