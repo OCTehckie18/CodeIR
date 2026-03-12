@@ -2,10 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
 import {
-  LayoutDashboard,
-  ClipboardCheck,
   User,
-  LogOut,
   Search,
   Filter,
   CheckCircle2,
@@ -13,7 +10,7 @@ import {
   FileText,
   ChevronRight,
 } from "lucide-react";
-import ThemeToggle from "./ThemeToggle";
+import NavBar from "./NavBar";
 
 interface InstructorDashboardProps {
   onNavigate: (view: "dashboard" | "evaluation" | "problems", submissionId?: string) => void;
@@ -65,9 +62,7 @@ export default function InstructorDashboard({
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
+  // Logout now handled by NavBar
 
   if (loading) {
     return (
@@ -82,56 +77,8 @@ export default function InstructorDashboard({
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden">
-      {/* ================= HEADER ================= */}
-      <header className="h-16 flex items-center justify-between px-6 border-b border-slate-300 dark:border-slate-800 bg-white/90 dark:bg-slate-900/50 backdrop-blur-md z-50">
-        <div className="flex items-center gap-6">
-          {/* TAB 1: DASHBOARD (Active) */}
-          <div className="flex items-center gap-2 text-red-400 cursor-default border-b-2 border-red-400 pb-0.5">
-            <LayoutDashboard size={20} />
-            <span className="font-bold tracking-wide">DASHBOARD</span>
-          </div>
-
-          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
-
-          {/* TAB: PROBLEM BANK */}
-          <div
-            onClick={() => onNavigate("problems")}
-            className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-cyan-400 cursor-pointer transition-colors select-none"
-            role="button"
-            tabIndex={0}
-          >
-            <ClipboardCheck size={20} />
-            <span className="font-bold tracking-wide">PROBLEM BANK</span>
-          </div>
-
-          {/* TAB 2: EVALUATION (Navigation Link) */}
-          {/* This was missing! Now you can click this to go to Sandbox Mode */}
-          <div
-            onClick={() => onNavigate("evaluation")}
-            className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-emerald-400 cursor-pointer transition-colors select-none"
-            role="button"
-            tabIndex={0}
-          >
-            <ClipboardCheck size={20} />
-            <span className="font-bold tracking-wide">EVALUATION</span>
-          </div>
-        </div>
-
-        {/* User Profile Section */}
-        <div className="flex items-center gap-4">
-          <ThemeToggle />
-          <div className="text-right hidden sm:block">
-            <p className="text-xs text-slate-600 dark:text-slate-400">Instructor Account</p>
-            <p className="text-sm font-medium text-red-200">{user?.email}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded-full hover:bg-slate-800 transition-colors"
-          >
-            <LogOut size={18} className="text-slate-600 dark:text-slate-400 hover:text-white" />
-          </button>
-        </div>
-      </header>
+      {/* SHARED NAV BAR */}
+      <NavBar role="instructor" active="dashboard" onNavigate={onNavigate} email={user?.email} />
 
       <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto p-4 lg:p-6 custom-scrollbar">
         <div className="flex flex-col lg:flex-row gap-6 w-full min-h-full">

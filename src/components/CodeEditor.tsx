@@ -8,16 +8,16 @@ import {
   FileJson,
   Languages,
   Save,
-  LayoutDashboard,
-  LogOut,
   CheckCircle2,
   Copy,
   Check,
+  BookmarkCheck,
+  PenLine,
 } from "lucide-react";
 
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels";
 import logo from "../assets/no-bg-white-logo.png";
-import ThemeToggle from "./ThemeToggle";
+import NavBar from "./NavBar";
 
 // Define props interface
 interface CodeEditorProps {
@@ -26,12 +26,6 @@ interface CodeEditorProps {
 }
 
 export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
-  // --- LOGOUT FUNCTION ---
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    // The App.tsx listener will automatically switch you back to AuthForm
-  };
-
   // State Management
   const [code, setCode] = useState(problem?.boilerplate_code || "// Write your source code here...");
   const [description, setDescription] = useState(problem?.problem_statement || "");
@@ -51,6 +45,9 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
   const [validationStatus, setValidationStatus] = useState<"pending" | "valid" | "invalid">("pending");
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [draftSubmissionId, setDraftSubmissionId] = useState<string | null>(null);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   const [copiedIr, setCopiedIr] = useState(false);
 
@@ -59,6 +56,60 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
     navigator.clipboard.writeText(irOutput);
     setCopiedIr(true);
     setTimeout(() => setCopiedIr(false), 2000);
+  };
+
+  // Save draft handler — no validation required; updates existing draft or creates new one
+  const handleSaveDraft = async () => {
+    if (!user) return alert("Please login first.");
+    if (!code.trim() || code.includes("Write your source code here")) {
+      return alert("Please write some code before saving a draft.");
+    }
+    setDraftSaving(true);
+    setDraftSaved(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers = { Authorization: `Bearer ${session?.access_token}` };
+
+      if (draftSubmissionId) {
+        // UPDATE existing draft via PUT
+        await axios.put(
+          `http://127.0.0.1:5000/api/submissions/${draftSubmissionId}`,
+          { code, description, language },
+          { headers }
+        );
+      } else {
+        // CREATE a new draft submission — reuse the POST endpoint but with a "draft" status
+        // We first need a problem record, so we POST a new submission with validation_status=draft
+        // and no IR/translations. We'll mark it as a draft via the PUT route pattern below:
+        // Actually: POST a new "draft" submission row using the existing POST route sending an empty irOutput.
+        const response = await axios.post(
+          "http://127.0.0.1:5000/api/submissions",
+          {
+            userId: user.id,
+            description: description || "Draft",
+            code,
+            language,
+            irOutput: "[Draft — not yet validated]",
+            translatedCode: "[Draft — not yet validated]",
+            validationStatus: "draft",
+          },
+          { headers }
+        );
+        if (response.data.submissionId) {
+          setDraftSubmissionId(response.data.submissionId);
+        } else if (response.data.submission_id) {
+          // fallback in case backend key name differs
+          setDraftSubmissionId(response.data.submission_id);
+        }
+      }
+      setDraftSaved(true);
+      setAiHints((prev) => ["Draft saved! Come back anytime to continue.", ...prev]);
+      setTimeout(() => setDraftSaved(false), 3000);
+    } catch (error: any) {
+      alert("Failed to save draft: " + (error.response?.data?.error || error.message));
+    } finally {
+      setDraftSaving(false);
+    }
   };
 
   // Fetch User on Mount
@@ -90,7 +141,8 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
 
       const payload = {
         userId: user.id,
-        problemId: problem?.problem_id || null, // Will be null if they didn't select one
+        description,                         // ← was missing — backend requires this
+        problemId: problem?.problem_id || null,
         code,
         language,
         irOutput,
@@ -111,7 +163,7 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
         throw new Error(response.data.error || "Unknown submission error.");
       }
     } catch (error: any) {
-      alert("Error submitting: " + error.response?.data?.error || error.message);
+      alert(`Error submitting: ${error.response?.data?.error || error.message}`);
     } finally {
       setLoading(false);
     }
@@ -167,51 +219,8 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden">
-      {/* ================= HEADER ================= */}
-      <header className="h-16 flex items-center justify-between px-6 border-b border-slate-300 dark:border-slate-800 bg-white/90 dark:bg-slate-900/50 backdrop-blur-md z-50">
-        <div className="flex items-center gap-6">
-          {/* --- DASHBOARD NAVIGATION --- */}
-          {/* Added onClick to navigate back to dashboard */}
-          <div
-            onClick={() => onNavigate?.("dashboard")}
-            className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-red-400 cursor-pointer transition-colors"
-          >
-            <LayoutDashboard size={20} />
-            <span className="font-bold tracking-wide">DASHBOARD</span>
-          </div>
-
-          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
-
-          {/* --- ACTIVE EDITOR TAB --- */}
-          <div className="flex items-center gap-2 text-cyan-400 cursor-default">
-            <CodeIcon size={20} />
-            <span className="font-bold tracking-wide border-b-2 border-cyan-400 pb-0.5">
-              EDITOR
-            </span>
-          </div>
-        </div>
-
-        {/* --- USER PROFILE --- */}
-        <div className="flex items-center gap-4">
-          <ThemeToggle />
-          <div className="text-right hidden sm:block">
-            <p className="text-xs text-slate-600 dark:text-slate-400">Logged in as</p>
-            <p className="text-sm font-medium text-blue-200">{user?.email}</p>
-          </div>
-
-          {/* Logout Trigger Button */}
-          <button
-            onClick={handleLogout}
-            className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 border border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:scale-105 transition-transform flex items-center justify-center group"
-            title="Sign Out"
-          >
-            <LogOut
-              size={16}
-              className="text-slate-900 dark:text-white opacity-0 group-hover:opacity-100 transition-opacity absolute"
-            />
-          </button>
-        </div>
-      </header>
+      {/* SHARED NAV BAR */}
+      <NavBar role="student" active="editor" onNavigate={onNavigate!} email={user?.email} />
 
       {/* ================= MAIN GRID LAYOUT (LeetCode Style with Draggable Resizer) ================= */}
       <div className="flex-1 p-4 overflow-hidden min-h-0 flex">
@@ -312,8 +321,28 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
                         <option value="racket">Racket</option>
                       </select>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      {/* Save Draft Button */}
                       <button
+                        id="save-draft-btn"
+                        onClick={handleSaveDraft}
+                        disabled={draftSaving}
+                        title={draftSubmissionId ? "Update your saved draft" : "Save as draft without validating"}
+                        className={`px-3 py-1.5 text-xs font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-2 focus:outline-none ${
+                          draftSaved
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                            : draftSaving
+                            ? "bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600"
+                            : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-400"
+                        }`}
+                      >
+                        {draftSaved ? <BookmarkCheck size={14} /> : <PenLine size={14} />}
+                        {draftSaving ? "SAVING..." : draftSaved ? "SAVED!" : "SAVE DRAFT"}
+                      </button>
+
+                      {/* Run Validation Button */}
+                      <button
+                        id="run-validation-btn"
                         onClick={handleValidate}
                         disabled={isEvaluating}
                         className={`px-4 py-1.5 text-xs font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-2 focus:outline-none ${isEvaluating
@@ -366,6 +395,7 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
                       {validationStatus === 'invalid' && <span className="text-xs text-rose-400 font-bold tracking-widest px-2 bg-rose-500/10 py-1 rounded border border-rose-500/20 flex-shrink-0">FAILED</span>}
                       
                       <button
+                          id="submit-solution-btn"
                           onClick={() => handleSubmit()}
                           disabled={loading || validationStatus !== "valid" || submissionSuccess}
                           className={`px-3 py-1 lg:px-5 lg:py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow flex items-center gap-2 transition-all whitespace-nowrap

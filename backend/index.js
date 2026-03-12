@@ -38,6 +38,112 @@ app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "ok", message: "CodeIR Express Backend is running!" });
 });
 
+// ─────────────────────────────────────────────────────────────────
+// PROFILE CRUD ENDPOINTS
+// These use Supabase's Admin Auth API to read/write user_metadata
+// stored directly on the auth.users record — no extra table needed.
+// ─────────────────────────────────────────────────────────────────
+
+// GET /api/profiles/:userId  —  Read profile (display_name, bio, theme, avatar_url, joined date)
+app.get("/api/profiles/:userId", async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const { data, error } = await supabase.auth.admin.getUserById(userId);
+        if (error) throw error;
+
+        const meta = data.user.user_metadata || {};
+        res.status(200).json({
+            success: true,
+            profile: {
+                userId: data.user.id,
+                email: data.user.email,
+                display_name: meta.display_name || data.user.email?.split("@")[0] || "Student",
+                bio: meta.bio || "",
+                avatar_url: meta.avatar_url || null,
+                theme_preference: meta.theme_preference || "dark",
+                role: meta.role || "student",
+                joined_at: data.user.created_at,
+            }
+        });
+    } catch (error) {
+        console.error("Profile GET Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// PUT /api/profiles/:userId  —  Update profile metadata
+app.put("/api/profiles/:userId", async (req, res) => {
+    const { userId } = req.params;
+    const { display_name, bio, theme_preference, avatar_url } = req.body;
+
+    try {
+        // Read existing metadata first so we don't overwrite unrelated fields
+        const { data: existing, error: fetchError } = await supabase.auth.admin.getUserById(userId);
+        if (fetchError) throw fetchError;
+
+        const currentMeta = existing.user.user_metadata || {};
+
+        const updatedMeta = {
+            ...currentMeta,
+            ...(display_name !== undefined && { display_name }),
+            ...(bio !== undefined && { bio }),
+            ...(theme_preference !== undefined && { theme_preference }),
+            ...(avatar_url !== undefined && { avatar_url }),
+        };
+
+        const { data, error } = await supabase.auth.admin.updateUserById(userId, {
+            user_metadata: updatedMeta,
+        });
+
+        if (error) throw error;
+
+        console.log(`Profile updated for user ${userId}`);
+        res.status(200).json({
+            success: true,
+            message: "Profile updated successfully.",
+            profile: {
+                display_name: updatedMeta.display_name,
+                bio: updatedMeta.bio,
+                theme_preference: updatedMeta.theme_preference,
+                avatar_url: updatedMeta.avatar_url,
+            }
+        });
+    } catch (error) {
+        console.error("Profile PUT Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// DELETE /api/profiles/:userId  —  Delete account and cascade all submissions
+app.delete("/api/profiles/:userId", async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        console.log(`Deleting account for user ${userId}...`);
+
+        // Step 1: Delete all submissions (cascade will handle pseudocodes/translations/evaluations)
+        const { error: subDeleteError } = await supabase
+            .from("submissions")
+            .delete()
+            .eq("user_id", userId);
+
+        if (subDeleteError) {
+            console.warn("Could not delete submissions:", subDeleteError.message);
+            // Continue anyway — the auth user deletion should still work
+        }
+
+        // Step 2: Delete the auth user (this removes them from auth.users entirely)
+        const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId);
+        if (authDeleteError) throw authDeleteError;
+
+        console.log(`Account for user ${userId} deleted.`);
+        res.status(200).json({ success: true, message: "Account deleted successfully." });
+    } catch (error) {
+        console.error("Account Delete Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Initialize Gemini AI Client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -182,22 +288,41 @@ app.post("/api/evaluate-code", async (req, res) => {
 
 // 2. DATABASE SUBMISSION ENDPOINT (Relational Inserts)
 app.post("/api/submissions", async (req, res) => {
-    const { userId, problemId, code, language, irOutput, translatedCode, validationStatus } = req.body;
+    const { userId, description, code, language, irOutput, translatedCode, validationStatus, problemId } = req.body;
 
-    if (!userId || !problemId || !code) {
+    if (!userId || !description || !code) {
         return res.status(400).json({ success: false, error: "Missing required fields for submission." });
     }
 
     try {
-        console.log("Handling database inserts...");
+        console.log(`Handling database inserts (status: ${validationStatus || "pending"})...`);
         const authSupabase = createAuthClient(req);
 
-        // 1. Insert Submission
+        // 1. Resolve problem_id:
+        //    - If student selected a problem from the Problem Bank, use that ID directly.
+        //    - If they typed a custom description in Sandbox mode, create a new problem row.
+        //    NOTE: We use the ADMIN supabase client here because `problems` is instructor-managed
+        //    and student JWTs are blocked from inserting by RLS. This is safe—the backend is the
+        //    trusted server; we're just creating a placeholder problem row for the FK constraint.
+        let resolvedProblemId = problemId || null;
+
+        if (!resolvedProblemId) {
+            const { data: newProblem, error: problemError } = await supabase  // admin client — bypasses RLS
+                .from("problems")
+                .insert({ problem_statement: description })
+                .select()
+                .single();
+
+            if (problemError) throw problemError;
+            resolvedProblemId = newProblem.problem_id;
+        }
+
+        // 2. Insert Submission — use auth client so RLS validates user_id ownership
         const { data: sub, error: subError } = await authSupabase
             .from("submissions")
             .insert({
                 user_id: userId,
-                problem_id: problemId,
+                problem_id: resolvedProblemId,
                 source_code: code,
                 source_language: language,
                 validation_status: validationStatus || "pending",
@@ -207,34 +332,115 @@ app.post("/api/submissions", async (req, res) => {
 
         if (subError) throw subError;
 
-        // 3. Insert Pseudocode
-        const { data: pseudo, error: pseudoError } = await authSupabase
-            .from("pseudocodes")
-            .insert({
-                submission_id: sub.submission_id,
-                structured_blocks: JSON.stringify({ ir: irOutput }),
-            })
-            .select()
-            .single();
+        // 3 & 4: Only insert Pseudocode + Translations for fully validated submissions.
+        // Drafts skip this entirely — they have no real IR/translation data yet.
+        if (validationStatus !== "draft") {
+            const { data: pseudo, error: pseudoError } = await authSupabase
+                .from("pseudocodes")
+                .insert({
+                    submission_id: sub.submission_id,
+                    structured_blocks: JSON.stringify({ ir: irOutput }),
+                })
+                .select()
+                .single();
 
-        if (pseudoError) throw pseudoError;
+            if (pseudoError) throw pseudoError;
 
-        // 4. Insert Translations
-        const { error: transError } = await authSupabase
-            .from("translations")
-            .insert({
-                pseudocode_id: pseudo.pseudocode_id,
-                target_language: "multiple",
-                translated_code: translatedCode,
-            });
+            const { error: transError } = await authSupabase
+                .from("translations")
+                .insert({
+                    pseudocode_id: pseudo.pseudocode_id,
+                    target_language: "multiple",
+                    translated_code: translatedCode,
+                });
 
-        if (transError) throw transError;
+            if (transError) throw transError;
+        }
         console.log("Submission saved successfully!");
         return res.status(201).json({ success: true, message: "Submission successfully securely saved!", submissionId: sub.submission_id });
 
     } catch (error) {
         console.error("Database Insert Error:", error.message);
         return res.status(500).json({ success: false, error: "Database transaction failed.", details: error.message });
+    }
+});
+
+// 2b. SAVE DRAFT ENDPOINT (UPDATE submission in place - no pseudocode/IR required)
+// PUT /api/submissions/:id   — Students can update code + description without validation
+app.put("/api/submissions/:id", async (req, res) => {
+    const { id } = req.params;
+    const { code, description, language } = req.body;
+
+    if (!code) {
+        return res.status(400).json({ success: false, error: "Code is required to save a draft." });
+    }
+
+    try {
+        console.log(`Saving draft for submission ${id}...`);
+        const authSupabase = createAuthClient(req);
+
+        // Update the source code and mark it as a draft (pending status)
+        const { data: updatedSub, error: subError } = await authSupabase
+            .from("submissions")
+            .update({
+                source_code: code,
+                source_language: language || "javascript",
+                validation_status: "draft",
+            })
+            .eq("submission_id", id)
+            .select()
+            .single();
+
+        if (subError) throw subError;
+        if (!updatedSub) {
+            return res.status(404).json({ success: false, error: "Submission not found or access denied." });
+        }
+
+        // If a new description is provided, also update the linked problem statement
+        if (description && updatedSub.problem_id) {
+            const { error: problemError } = await authSupabase
+                .from("problems")
+                .update({ problem_statement: description })
+                .eq("problem_id", updatedSub.problem_id);
+
+            if (problemError) console.warn("Could not update problem statement:", problemError.message);
+        }
+
+        console.log("Draft saved successfully!");
+        return res.status(200).json({ success: true, message: "Draft saved successfully!", submissionId: updatedSub.submission_id });
+
+    } catch (error) {
+        console.error("Draft Save Error:", error.message);
+        return res.status(500).json({ success: false, error: "Failed to save draft.", details: error.message });
+    }
+});
+
+// 2c. DELETE SUBMISSION ENDPOINT
+// DELETE /api/submissions/:id   — Students can delete their own submissions
+app.delete("/api/submissions/:id", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        console.log(`Deleting submission ${id}...`);
+        const authSupabase = createAuthClient(req);
+
+        // Supabase Row Level Security on the 'submissions' table will ensure only
+        // the owner (user_id = auth.uid()) can delete their own submissions.
+        // The cascade delete in the DB will automatically remove related
+        // pseudocodes, translations, and evaluations.
+        const { error } = await authSupabase
+            .from("submissions")
+            .delete()
+            .eq("submission_id", id);
+
+        if (error) throw error;
+
+        console.log(`Submission ${id} deleted.`);
+        return res.status(200).json({ success: true, message: "Submission deleted successfully." });
+
+    } catch (error) {
+        console.error("Delete Error:", error.message);
+        return res.status(500).json({ success: false, error: "Failed to delete submission.", details: error.message });
     }
 });
 
@@ -257,6 +463,80 @@ app.get("/api/dashboard/:userId", async (req, res) => {
 
         res.status(200).json({ success: true, data });
     } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// REVIEW COMMENTS CRUD  (Granular Code Review)
+// ─────────────────────────────────────────────────────────────────
+
+// CREATE — POST /api/review-comments
+app.post("/api/review-comments", async (req, res) => {
+    const { submission_id, instructor_id, line_number, comment_text, comment_type } = req.body;
+    if (!submission_id || !instructor_id || !comment_text) {
+        return res.status(400).json({ success: false, error: "submission_id, instructor_id, and comment_text are required." });
+    }
+    try {
+        const { data, error } = await supabase
+            .from("review_comments")
+            .insert({ submission_id, instructor_id, line_number: line_number ?? 0, comment_text, comment_type: comment_type || "general" })
+            .select().single();
+        if (error) throw error;
+        res.status(201).json({ success: true, data });
+    } catch (error) {
+        console.error("Review Comment POST Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// READ — GET /api/review-comments/:submissionId
+app.get("/api/review-comments/:submissionId", async (req, res) => {
+    const { submissionId } = req.params;
+    try {
+        const { data, error } = await supabase
+            .from("review_comments")
+            .select("*")
+            .eq("submission_id", submissionId)
+            .order("line_number", { ascending: true })
+            .order("created_at", { ascending: true });
+        if (error) throw error;
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error("Review Comment GET Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// UPDATE — PUT /api/review-comments/:commentId
+app.put("/api/review-comments/:commentId", async (req, res) => {
+    const { commentId } = req.params;
+    const { comment_text, comment_type, line_number } = req.body;
+    if (!comment_text) return res.status(400).json({ success: false, error: "comment_text is required." });
+    try {
+        const { data, error } = await supabase
+            .from("review_comments")
+            .update({ comment_text, ...(comment_type !== undefined && { comment_type }), ...(line_number !== undefined && { line_number }) })
+            .eq("comment_id", commentId)
+            .select().single();
+        if (error) throw error;
+        if (!data) return res.status(404).json({ success: false, error: "Comment not found." });
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error("Review Comment PUT Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// DELETE — DELETE /api/review-comments/:commentId
+app.delete("/api/review-comments/:commentId", async (req, res) => {
+    const { commentId } = req.params;
+    try {
+        const { error } = await supabase.from("review_comments").delete().eq("comment_id", commentId);
+        if (error) throw error;
+        res.status(200).json({ success: true, message: "Comment deleted." });
+    } catch (error) {
+        console.error("Review Comment DELETE Error:", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });

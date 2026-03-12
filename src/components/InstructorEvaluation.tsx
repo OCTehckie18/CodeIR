@@ -8,15 +8,13 @@ import {
   ClipboardCheck,
   MessageSquare,
   Save,
-  LayoutDashboard,
-  LogOut,
   Sparkles,
-  User,
 } from "lucide-react";
 
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels";
 import logo from "../assets/no-bg-white-logo.png";
-import ThemeToggle from "./ThemeToggle";
+import NavBar from "./NavBar";
+import ReviewComments from "./ReviewComments";
 
 // 1. Define the Props Interface ensuring onBack is required
 interface InstructorEvaluationProps {
@@ -48,6 +46,7 @@ export default function InstructorEvaluation({
     style: 0,
   });
   const [user, setUser] = useState<any>(null);
+  const [activeBottomTab, setActiveBottomTab] = useState<"feedback" | "comments">("feedback");
 
   // --- Fetch User & Specific Submission ---
   useEffect(() => {
@@ -100,9 +99,7 @@ export default function InstructorEvaluation({
     init();
   }, [submissionId]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
+  // Logout now handled by NavBar
 
   const handleAISuggestion = async () => {
     setIsAutoGrading(true);
@@ -214,60 +211,23 @@ export default function InstructorEvaluation({
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden">
-      {/* ================= HEADER ================= */}
-      <header className="h-16 flex items-center justify-between px-6 border-b border-slate-300 dark:border-slate-800 bg-white/90 dark:bg-slate-900/50 backdrop-blur-md z-50">
-        <div className="flex items-center gap-6">
-          {/* --- NAVIGATION: DASHBOARD LINK --- */}
-          {/* Changed to DIV to match Student Dashboard behavior exactly */}
-          <div
-            onClick={onBack}
-            className="flex items-center gap-2 text-red-400 hover:text-red-300 cursor-pointer transition-colors select-none"
-            role="button"
-            tabIndex={0}
-          >
-            <LayoutDashboard size={20} />
-            <span className="font-bold tracking-wide">DASHBOARD</span>
-          </div>
-
-          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
-
-          <div className="flex items-center gap-2 text-emerald-400 cursor-default">
-            <ClipboardCheck size={20} />
-            <span className="font-bold tracking-wide border-b-2 border-emerald-400 pb-0.5">
-              EVALUATION
-            </span>
-          </div>
+      {/* SHARED NAV BAR — onBack maps to 'dashboard' navigate */}
+      <NavBar
+        role="instructor"
+        active="evaluation"
+        onNavigate={(_view) => {
+          // All navigation from Evaluation goes back through onBack to App.tsx
+          onBack();
+        }}
+        email={user?.email}
+      />
+      {/* Manual Mode indicator shown below navbar when no submission ID */}
+      {!submission && (
+        <div className="flex items-center gap-2 px-6 py-1.5 bg-blue-500/10 border-b border-blue-500/20">
+          <CodeIcon size={12} className="text-blue-400" />
+          <span className="text-xs text-blue-300 font-semibold tracking-wide">MANUAL EVALUATION MODE — No submission linked</span>
         </div>
-
-        <div className="flex items-center gap-4">
-          <ThemeToggle />
-          {!submission && (
-            <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1">
-              <CodeIcon size={12} /> Manual Mode
-            </span>
-          )}
-          <div className="text-right hidden sm:block">
-            <p className="text-xs text-slate-600 dark:text-slate-400">Instructor Mode</p>
-            <p className="text-sm font-medium text-emerald-200">
-              {user?.email}
-            </p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 border border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.5)] hover:scale-105 transition-transform flex items-center justify-center group"
-            title="Sign Out"
-          >
-            <LogOut
-              size={16}
-              className="text-slate-900 dark:text-white opacity-0 group-hover:opacity-100 transition-opacity absolute"
-            />
-            <User
-              size={16}
-              className="text-slate-900 dark:text-white group-hover:opacity-0 transition-opacity absolute"
-            />
-          </button>
-        </div>
-      </header>
+      )}
 
       {/* ================= MAIN CONTENT (Draggable Panels) ================= */}
       <div className="flex-1 p-4 overflow-hidden min-h-0 flex">
@@ -463,40 +423,73 @@ export default function InstructorEvaluation({
                 <div className="w-16 h-1 rounded-full bg-slate-300 dark:bg-slate-700/50 group-hover:bg-blue-500 transition-colors"></div>
               </PanelResizeHandle>
 
-              {/* FEEDBACK BOX */}
+              {/* FEEDBACK + COMMENTS TABS */}
               <Panel defaultSize={40} minSize={20} className="flex flex-col pt-2 relative">
                 <div className="h-full flex flex-col rounded-xl border border-emerald-500/30 bg-emerald-900/5 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                  <div className="px-4 py-3 bg-emerald-900/20 border-b border-emerald-500/20 flex flex-col">
-                    <span className="text-sm font-semibold text-emerald-300 flex items-center gap-2">
-                      <MessageSquare size={16} /> Instructor Feedback
-                    </span>
-                  </div>
-                  <div className="flex-1 min-h-[0px] flex">
-                    <textarea
-                      className="w-full h-full bg-transparent p-4 resize-none focus:outline-none text-emerald-100 placeholder-emerald-500/50 text-sm custom-scrollbar"
-                      placeholder="Enter detailed feedback for the student here..."
-                      value={feedback}
-                      onChange={(e) => setFeedback(e.target.value)}
-                    />
-                  </div>
-                  <div className="p-4 bg-emerald-900/20 border-t border-emerald-500/20">
+
+                  {/* Tab bar */}
+                  <div className="flex border-b border-emerald-500/20 bg-emerald-900/20 flex-shrink-0">
                     <button
-                      onClick={handleSubmitEvaluation}
-                      disabled={loading}
-                      className={`w-full py-2.5 font-bold rounded-lg shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all bg-emerald-500 hover:bg-emerald-400 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed`}
+                      id="tab-feedback"
+                      onClick={() => setActiveBottomTab("feedback")}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold transition-colors ${
+                        activeBottomTab === "feedback"
+                          ? "text-emerald-300 border-b-2 border-emerald-400"
+                          : "text-slate-500 hover:text-slate-300"
+                      }`}
                     >
-                      {loading ? (
-                        <img src={logo} alt="Loading" className="animate-float h-5 w-5 object-contain" />
-                      ) : (
-                        <Save size={16} />
-                      )}
-                      {loading
-                        ? "Saving..."
-                        : submission
-                          ? "Submit Evaluation"
-                          : "Save Manual Evaluation"}
+                      <Save size={11} /> Feedback
+                    </button>
+                    <button
+                      id="tab-comments"
+                      onClick={() => setActiveBottomTab("comments")}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold transition-colors ${
+                        activeBottomTab === "comments"
+                          ? "text-emerald-300 border-b-2 border-emerald-400"
+                          : "text-slate-500 hover:text-slate-300"
+                      }`}
+                    >
+                      <MessageSquare size={11} /> Line Comments
                     </button>
                   </div>
+
+                  {/* Feedback tab */}
+                  {activeBottomTab === "feedback" && (
+                    <>
+                      <div className="flex-1 min-h-[0px] flex">
+                        <textarea
+                          className="w-full h-full bg-transparent p-4 resize-none focus:outline-none text-emerald-100 placeholder-emerald-500/50 text-sm custom-scrollbar"
+                          placeholder="Enter overall feedback for the student here..."
+                          value={feedback}
+                          onChange={(e) => setFeedback(e.target.value)}
+                        />
+                      </div>
+                      <div className="p-4 bg-emerald-900/20 border-t border-emerald-500/20 flex-shrink-0">
+                        <button
+                          onClick={handleSubmitEvaluation}
+                          disabled={loading}
+                          className={`w-full py-2.5 font-bold rounded-lg shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all bg-emerald-500 hover:bg-emerald-400 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {loading ? (
+                            <img src={logo} alt="Loading" className="animate-float h-5 w-5 object-contain" />
+                          ) : (
+                            <Save size={16} />
+                          )}
+                          {loading ? "Saving..." : submission ? "Submit Evaluation" : "Save Manual Evaluation"}
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Line Comments tab */}
+                  {activeBottomTab === "comments" && (
+                    <ReviewComments
+                      submissionId={submissionId}
+                      instructorId={user?.id}
+                      code={code}
+                    />
+                  )}
+
                 </div>
               </Panel>
 

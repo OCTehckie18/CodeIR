@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { supabase } from "../lib/supabaseClient";
-import ThemeToggle from "./ThemeToggle";
+import NavBar from "./NavBar";
 import {
-  LayoutDashboard,
-  LogOut,
   Plus,
   Edit2,
   Trash2,
@@ -55,16 +53,15 @@ export default function ProblemList({ role, onNavigate, onSelectProblem }: Probl
       if (response.data.success) {
         setProblems(response.data.data);
       }
-    } catch (error) {
-      console.error("Error fetching problems:", error);
+    } catch (error: any) {
+      const msg = error.response?.data?.error || error.message || "Unknown error";
+      console.error("Error fetching problems:", msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
+  // Logout is now handled by NavBar
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -82,9 +79,10 @@ export default function ProblemList({ role, onNavigate, onSelectProblem }: Probl
       setEditingProblem(null);
       setFormData({ title: "", problem_statement: "", boilerplate_code: "", difficulty_level: "Easy" });
       fetchProblems();
-    } catch (error) {
-      console.error("Error saving problem:", error);
-      alert("Error saving problem.");
+    } catch (error: any) {
+      const msg = error.response?.data?.error || error.message || "Unknown error";
+      console.error("Error saving problem:", msg);
+      alert(`Error saving problem: ${msg}`);
     }
   };
 
@@ -104,9 +102,10 @@ export default function ProblemList({ role, onNavigate, onSelectProblem }: Probl
     try {
       await axios.delete(`http://127.0.0.1:5000/api/problems/${id}`);
       fetchProblems();
-    } catch (error) {
-      console.error("Error deleting problem:", error);
-      alert("Error deleting problem.");
+    } catch (error: any) {
+      const msg = error.response?.data?.error || error.message || "Unknown error";
+      console.error("Error deleting problem:", msg);
+      alert(`Error deleting problem: ${msg}`);
     }
   };
 
@@ -132,39 +131,13 @@ export default function ProblemList({ role, onNavigate, onSelectProblem }: Probl
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden">
-      {/* HEADER */}
-      <header className="h-16 flex items-center justify-between px-6 border-b border-slate-300 dark:border-slate-800 bg-white/90 dark:bg-slate-900/50 backdrop-blur-md z-50">
-        <div className="flex items-center gap-6">
-          <div
-            onClick={() => onNavigate("dashboard")}
-            className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-cyan-400 cursor-pointer transition-colors"
-          >
-            <LayoutDashboard size={20} />
-            <span className="font-bold tracking-wide">DASHBOARD</span>
-          </div>
-
-          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
-
-          <div className="flex items-center gap-2 text-cyan-400 cursor-default border-b-2 border-cyan-400 pb-0.5">
-            <BookOpen size={20} />
-            <span className="font-bold tracking-wide">PROBLEM BANK</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <ThemeToggle />
-          <div className="text-right hidden sm:block">
-            <p className="text-xs text-slate-600 dark:text-slate-400">{role === "instructor" ? "Instructor Account" : "Student Account"}</p>
-            <p className="text-sm font-medium text-blue-200">{user?.email}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded-full hover:bg-slate-800 transition-colors"
-          >
-            <LogOut size={18} className="text-slate-600 dark:text-slate-400 hover:text-white" />
-          </button>
-        </div>
-      </header>
+      {/* SHARED NAV BAR */}
+      <NavBar
+        role={role === "instructor" ? "instructor" : "student"}
+        active="problems"
+        onNavigate={onNavigate}
+        email={user?.email}
+      />
 
       {/* MAIN CONTENT */}
       <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto p-4 lg:p-6 custom-scrollbar relative">

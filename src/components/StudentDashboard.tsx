@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
-import ThemeToggle from "./ThemeToggle";
+import NavBar from "./NavBar";
+import ProfileSettings from "./ProfileSettings";
 import {
-  LayoutDashboard,
-  Code as CodeIcon,
   User,
-  LogOut,
   Trophy,
   Flame,
   Calendar,
@@ -14,6 +12,8 @@ import {
   XCircle,
   Clock,
   FileCode,
+  Trash2,
+  Settings,
 } from "lucide-react";
 
 export default function StudentDashboard({
@@ -22,10 +22,18 @@ export default function StudentDashboard({
   onNavigate: (page: "dashboard" | "editor" | "problems") => void;
 }) {
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ totalSolved: 0, currentStreak: 0 });
+  const [stats, setStats] = useState({
+    totalSolved: 0,
+    currentStreak: 0,
+    bestStreak: 0,
+    avgScores: { correctness: 0, efficiency: 0, style: 0 },
+  });
   const [calendarData, setCalendarData] = useState<any[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -39,17 +47,41 @@ export default function StudentDashboard({
       if (!session) return;
       setUser(session.user);
 
-      const response = await axios.get(`http://127.0.0.1:5000/api/dashboard/${session.user.id}`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      });
+      // allSettled: a profile failure NEVER blocks submissions from loading
+      const [profileResult, dashboardResult] = await Promise.allSettled([
+        axios.get(`http://127.0.0.1:5000/api/profiles/${session.user.id}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        }),
+        axios.get(`http://127.0.0.1:5000/api/dashboard/${session.user.id}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        })
+      ]);
 
-      if (!response.data.success) {
-        throw new Error(response.data.error || "Failed to fetch student dashboard data");
+      // ── Profile (best-effort: failure is non-fatal) ──
+      if (profileResult.status === "fulfilled" && profileResult.value.data.success) {
+        const p = profileResult.value.data.profile;
+        setProfile(p);
+        const savedTheme = p.theme_preference || "dark";
+        if (savedTheme === "dark") {
+          document.documentElement.classList.add("dark");
+          localStorage.setItem("theme", "dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+          localStorage.setItem("theme", "light");
+        }
+      } else if (profileResult.status === "rejected") {
+        console.warn("Profile fetch failed (non-fatal):", profileResult.reason?.message);
       }
 
-      const safeSubs = response.data.data || [];
+      // ── Submissions (required) ──
+      if (dashboardResult.status === "rejected") {
+        throw new Error("Failed to fetch submissions: " + dashboardResult.reason?.message);
+      }
+      if (!dashboardResult.value.data.success) {
+        throw new Error(dashboardResult.value.data.error || "Failed to fetch student dashboard data");
+      }
+
+      const safeSubs = dashboardResult.value.data.data || [];
       setSubmissions(safeSubs);
       calculateStats(safeSubs);
       processCalendarData(safeSubs);
@@ -59,6 +91,7 @@ export default function StudentDashboard({
       setLoading(false);
     }
   };
+
 
   // --- DATA TRANSFORMATION FOR HEATMAP ---
   const processCalendarData = (subs: any[]) => {
@@ -90,10 +123,45 @@ export default function StudentDashboard({
   };
 
   const calculateStats = (subs: any[]) => {
-    setStats({
-      totalSolved: subs.length,
-      currentStreak: calculateStreak(subs),
-    });
+    const currentStreak = calculateStreak(subs);
+
+    // Best streak: compute all-time by scanning date sequence
+    const bestStreak = (() => {
+      if (subs.length === 0) return 0;
+      const uniqueDates = Array.from(
+        new Set(subs.map((s) => new Date(s.submission_timestamp).toISOString().split("T")[0]))
+      ).sort();
+      let best = 1, cur = 1;
+      for (let i = 1; i < uniqueDates.length; i++) {
+        const a = new Date(uniqueDates[i - 1]), b = new Date(uniqueDates[i]);
+        const diff = (b.getTime() - a.getTime()) / (1000 * 3600 * 24);
+        cur = diff === 1 ? cur + 1 : 1;
+        if (cur > best) best = cur;
+      }
+      return best;
+    })();
+
+    // Average scores across all evaluated submissions
+    const evaluated = subs.filter(
+      (s) => s.evaluations &&
+        (Array.isArray(s.evaluations) ? s.evaluations[0]?.final_scores : s.evaluations?.final_scores)
+    );
+    const avgScores = { correctness: 0, efficiency: 0, style: 0 };
+    if (evaluated.length > 0) {
+      evaluated.forEach((s) => {
+        const sc = Array.isArray(s.evaluations) ? s.evaluations[0]?.final_scores : s.evaluations?.final_scores;
+        if (sc) {
+          avgScores.correctness += sc.correctness || 0;
+          avgScores.efficiency += sc.efficiency || 0;
+          avgScores.style += sc.style || 0;
+        }
+      });
+      avgScores.correctness = Math.round(avgScores.correctness / evaluated.length);
+      avgScores.efficiency = Math.round(avgScores.efficiency / evaluated.length);
+      avgScores.style = Math.round(avgScores.style / evaluated.length);
+    }
+
+    setStats({ totalSolved: subs.length, currentStreak, bestStreak, avgScores });
   };
 
   const calculateStreak = (subs: any[]) => {
@@ -130,8 +198,31 @@ export default function StudentDashboard({
     return streak;
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  // Logout is now handled by NavBar
+
+  const handleDeleteSubmission = async (submissionId: string) => {
+    if (!window.confirm("Are you sure you want to delete this submission? This cannot be undone.")) return;
+    setDeletingId(submissionId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await axios.delete(
+        `http://127.0.0.1:5000/api/submissions/${submissionId}`,
+        { headers: { Authorization: `Bearer ${session?.access_token}` } }
+      );
+      if (response.data.success) {
+        // Optimistically remove from local state
+        const updated = submissions.filter((s) => s.submission_id !== submissionId);
+        setSubmissions(updated);
+        calculateStats(updated);
+        processCalendarData(updated);
+      } else {
+        alert("Failed to delete submission: " + response.data.error);
+      }
+    } catch (error: any) {
+      alert("Error deleting submission: " + (error.response?.data?.error || error.message));
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   // Helper for Heatmap Colors
@@ -162,45 +253,10 @@ export default function StudentDashboard({
   }
 
   return (
+    <>
     <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden">
-      {/* HEADER */}
-      <header className="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-slate-300 dark:border-slate-800 bg-white/90 dark:bg-slate-900/50 backdrop-blur-md z-50">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 text-red-400 cursor-default border-b-2 border-red-400 pb-0.5">
-            <LayoutDashboard size={20} />
-            <span className="font-bold tracking-wide">DASHBOARD</span>
-          </div>
-          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
-          <div
-            className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-cyan-400 cursor-pointer transition-colors"
-            onClick={() => onNavigate("problems")}
-          >
-            <CodeIcon size={20} />
-            <span className="font-bold tracking-wide">PROBLEM BANK</span>
-          </div>
-          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
-          <div
-            className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-cyan-400 cursor-pointer transition-colors"
-            onClick={() => onNavigate("editor")}
-          >
-            <CodeIcon size={20} />
-            <span className="font-bold tracking-wide">SANDBOX</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <ThemeToggle />
-          <div className="text-right hidden sm:block">
-            <p className="text-xs text-slate-600 dark:text-slate-400">Student Account</p>
-            <p className="text-sm font-medium text-blue-200">{user?.email}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded-full hover:bg-slate-800 transition-colors"
-          >
-            <LogOut size={18} className="text-slate-600 dark:text-slate-400 hover:text-white" />
-          </button>
-        </div>
-      </header>
+      {/* SHARED NAV BAR */}
+      <NavBar role="student" active="dashboard" onNavigate={onNavigate} email={user?.email} />
 
       <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto p-4 lg:p-6 custom-scrollbar">
         <div className="flex flex-col lg:flex-row gap-6 w-full min-h-full">
@@ -218,19 +274,34 @@ export default function StudentDashboard({
                 </div>
                 <div className="flex flex-col z-10">
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">
-                    {user?.email?.split("@")[0] || "Student"}
+                    {profile?.display_name || user?.email?.split("@")[0] || "Student"}
                   </h2>
-                  <p className="text-sm text-cyan-400 font-medium">Rank: Novice</p>
+                  <p className="text-sm font-medium" style={{ color:
+                    stats.totalSolved >= 20 ? '#a78bfa' : // purple — Expert
+                    stats.totalSolved >= 10 ? '#60a5fa' : // blue — Intermediate
+                    stats.totalSolved >= 5  ? '#34d399' : // green — Apprentice
+                    '#22d3ee'                              // cyan — Novice
+                  }}>
+                    Rank: {stats.totalSolved >= 20 ? 'Expert' : stats.totalSolved >= 10 ? 'Intermediate' : stats.totalSolved >= 5 ? 'Apprentice' : 'Novice'}
+                  </p>
+                  {profile?.bio && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-[150px] line-clamp-2">{profile.bio}</p>
+                  )}
                 </div>
               </div>
               
-              <div className="w-full flex justify-center gap-3 mb-6 z-10">
-                <button className="flex-1 py-1.5 bg-white/[0.04] hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 border border-black/10 dark:border-white/10 rounded-lg text-sm font-semibold transition-colors">
+              <div className="w-full flex justify-center gap-3 mb-6 relative z-10">
+                <button
+                  id="edit-profile-btn"
+                  onClick={() => setShowProfileSettings(true)}
+                  className="flex-1 flex items-center justify-center gap-2 py-1.5 bg-white/[0.04] hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 border border-black/10 dark:border-white/10 rounded-lg text-sm font-semibold transition-colors"
+                >
+                  <Settings size={14} />
                   Edit Profile
                 </button>
               </div>
 
-              <div className="w-full border-t border-white/5 pt-5 z-10 space-y-4">
+              <div className="w-full border-t border-white/5 pt-5 relative z-10 space-y-4">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2"><Trophy size={16} className="text-slate-500 dark:text-slate-500"/> Total Solved</span>
                   <span className="text-slate-900 dark:text-white font-semibold text-base">{stats.totalSolved}</span>
@@ -241,7 +312,11 @@ export default function StudentDashboard({
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2"><Calendar size={16} className="text-slate-500 dark:text-slate-500"/> Joined</span>
-                  <span className="text-slate-900 dark:text-white font-semibold text-sm">Oct 2023</span>
+                  <span className="text-slate-900 dark:text-white font-semibold text-sm">
+                    {profile?.joined_at
+                      ? new Date(profile.joined_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+                      : "—"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -285,35 +360,31 @@ export default function StudentDashboard({
                   </div>
                 </div>
 
-                {/* Score Breakdown (Simulated typical LC easy/med/hard look but for scores) */}
+                {/* Average Score Breakdown from real evaluations */}
                 <div className="flex-1 space-y-4">
-                  <div>
-                    <div className="flex justify-between items-end mb-1.5">
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Correctness</span>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">8<span className="text-slate-500 dark:text-slate-500 font-normal">/10</span></span>
+                  {[
+                    { label: 'Correctness', value: stats.avgScores.correctness, color: 'bg-emerald-500' },
+                    { label: 'Efficiency',  value: stats.avgScores.efficiency,  color: 'bg-yellow-500' },
+                    { label: 'Code Style',  value: stats.avgScores.style,       color: 'bg-rose-500' },
+                  ].map(({ label, value, color }) => (
+                    <div key={label}>
+                      <div className="flex justify-between items-end mb-1.5">
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{label}</span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">
+                          {value}<span className="text-slate-500 dark:text-slate-500 font-normal">/10</span>
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${color} rounded-full transition-all duration-700`}
+                          style={{ width: `${value * 10}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: '80%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-end mb-1.5">
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Efficiency</span>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">7<span className="text-slate-500 dark:text-slate-500 font-normal">/10</span></span>
-                    </div>
-                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-yellow-500 rounded-full" style={{ width: '70%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-end mb-1.5">
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Code Style</span>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">9<span className="text-slate-500 dark:text-slate-500 font-normal">/10</span></span>
-                    </div>
-                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-rose-500 rounded-full" style={{ width: '90%' }}></div>
-                    </div>
-                  </div>
+                  ))}
+                  {stats.avgScores.correctness === 0 && stats.avgScores.efficiency === 0 && (
+                    <p className="text-[11px] text-slate-500 dark:text-slate-500 italic">Scores will appear after your first evaluated submission.</p>
+                  )}
                 </div>
               </div>
 
@@ -328,7 +399,11 @@ export default function StudentDashboard({
                   <span className="text-6xl font-black text-slate-900 dark:text-white tracking-tighter">{stats.currentStreak}</span>
                   <span className="text-slate-600 dark:text-slate-400 font-medium pb-1">days</span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-500 mt-3 font-medium z-10">Keep it up! Your best streak is 14 days.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-3 font-medium z-10">
+                  {stats.bestStreak > 0
+                    ? `Your best streak is ${stats.bestStreak} day${stats.bestStreak !== 1 ? 's' : ''}.`
+                    : "Submit today to start a streak!"}
+                </p>
               </div>
             </div>
 
@@ -381,6 +456,7 @@ export default function StudentDashboard({
                       <th className="px-4 py-2 w-1/4">Feedback</th>
                       <th className="px-4 py-2 w-[80px]">Score</th>
                       <th className="px-4 py-2 text-right w-[100px]">Status</th>
+                      <th className="px-4 py-2 text-right w-[50px]"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -412,7 +488,7 @@ export default function StudentDashboard({
                           <td className="px-4 py-4">
                             {isEvaluated && evalObj.teacher_feedback ? (
                               <div className="text-[11px] text-slate-700 dark:text-slate-300 italic truncate max-w-[150px] lg:max-w-[200px]" title={evalObj.teacher_feedback}>
-                                "{evalObj.teacher_feedback}"
+                                {evalObj.teacher_feedback}
                               </div>
                             ) : (
                               <span className="text-slate-600 text-[11px] font-medium">-</span>
@@ -432,15 +508,26 @@ export default function StudentDashboard({
                               <span className="text-slate-600 text-xs font-medium">-</span>
                             )}
                           </td>
-                          <td className="px-4 py-4 text-right rounded-r-xl">
+                          <td className="px-4 py-4 text-right rounded-r-xl">  
                             <StatusBadge status={sub.validation_status} />
+                          </td>
+                          <td className="px-2 py-4 text-right">
+                            <button
+                              id={`delete-submission-${sub.submission_id}`}
+                              onClick={() => handleDeleteSubmission(sub.submission_id)}
+                              disabled={deletingId === sub.submission_id}
+                              title="Delete this submission"
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </td>
                         </tr>
                       )
                     })}
                     {submissions.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="py-12 text-center text-slate-500 dark:text-slate-500 font-medium bg-white/[0.01] rounded-xl">
+                        <td colSpan={6} className="py-12 text-center text-slate-500 dark:text-slate-500 font-medium bg-white/[0.01] rounded-xl">
                           No recent submissions. Start coding!
                         </td>
                       </tr>
@@ -453,6 +540,18 @@ export default function StudentDashboard({
         </div>
       </div>
     </div>
+
+    {/* ── Profile Settings Modal ── */}
+    {showProfileSettings && user && (
+      <ProfileSettings
+        userId={user.id}
+        onClose={() => setShowProfileSettings(false)}
+        onProfileUpdated={(updated) => {
+          setProfile((prev: any) => ({ ...prev, ...updated }));
+        }}
+      />
+    )}
+    </>
   );
 }
 
@@ -469,6 +568,12 @@ const StatusBadge = ({ status }: { status: string }) => {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/10 text-red-400 text-xs font-bold border border-red-500/20">
           <XCircle size={12} /> Failed
+        </span>
+      );
+    case "draft":
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/20">
+          <Clock size={12} /> Draft
         </span>
       );
     default:
