@@ -16,7 +16,7 @@ import {
 import ThemeToggle from "./ThemeToggle";
 
 interface InstructorDashboardProps {
-  onNavigate: (view: "dashboard" | "evaluation", submissionId?: string) => void;
+  onNavigate: (view: "dashboard" | "evaluation" | "problems", submissionId?: string) => void;
 }
 
 export default function InstructorDashboard({
@@ -92,6 +92,17 @@ export default function InstructorDashboard({
           </div>
 
           <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+          {/* TAB: PROBLEM BANK */}
+          <div
+            onClick={() => onNavigate("problems")}
+            className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-cyan-400 cursor-pointer transition-colors select-none"
+            role="button"
+            tabIndex={0}
+          >
+            <ClipboardCheck size={20} />
+            <span className="font-bold tracking-wide">PROBLEM BANK</span>
+          </div>
 
           {/* TAB 2: EVALUATION (Navigation Link) */}
           {/* This was missing! Now you can click this to go to Sandbox Mode */}

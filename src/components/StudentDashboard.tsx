@@ -19,7 +19,7 @@ import {
 export default function StudentDashboard({
   onNavigate,
 }: {
-  onNavigate: (page: "dashboard" | "editor") => void;
+  onNavigate: (page: "dashboard" | "editor" | "problems") => void;
 }) {
   const [user, setUser] = useState<any>(null);
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -173,10 +173,18 @@ export default function StudentDashboard({
           <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
           <div
             className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-cyan-400 cursor-pointer transition-colors"
+            onClick={() => onNavigate("problems")}
+          >
+            <CodeIcon size={20} />
+            <span className="font-bold tracking-wide">PROBLEM BANK</span>
+          </div>
+          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
+          <div
+            className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-cyan-400 cursor-pointer transition-colors"
             onClick={() => onNavigate("editor")}
           >
             <CodeIcon size={20} />
-            <span className="font-bold tracking-wide">EDITOR</span>
+            <span className="font-bold tracking-wide">SANDBOX</span>
           </div>
         </div>
         <div className="flex items-center gap-4">

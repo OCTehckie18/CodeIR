@@ -21,10 +21,11 @@ import ThemeToggle from "./ThemeToggle";
 
 // Define props interface
 interface CodeEditorProps {
-  onNavigate?: (page: "dashboard" | "editor") => void;
+  onNavigate?: (page: "dashboard" | "editor" | "problems") => void;
+  problem?: any;
 }
 
-export default function CodeEditor({ onNavigate }: CodeEditorProps) {
+export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
   // --- LOGOUT FUNCTION ---
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -32,8 +33,8 @@ export default function CodeEditor({ onNavigate }: CodeEditorProps) {
   };
 
   // State Management
-  const [code, setCode] = useState("// Write your source code here...");
-  const [description, setDescription] = useState("");
+  const [code, setCode] = useState(problem?.boilerplate_code || "// Write your source code here...");
+  const [description, setDescription] = useState(problem?.problem_statement || "");
   const [language, setLanguage] = useState("javascript");
   const [loading, setLoading] = useState(false);
   const [aiHints, setAiHints] = useState<string[]>([
@@ -89,7 +90,7 @@ export default function CodeEditor({ onNavigate }: CodeEditorProps) {
 
       const payload = {
         userId: user.id,
-        description,
+        problemId: problem?.problem_id || null, // Will be null if they didn't select one
         code,
         language,
         irOutput,

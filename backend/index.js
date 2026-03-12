@@ -62,6 +62,74 @@ async function generateAIContent(engine, prompt) {
     }
 }
 
+// --- PROBLEM BANK ENDPOINTS ---
+
+app.post("/api/problems", async (req, res) => {
+    try {
+        const { title, problem_statement, boilerplate_code, difficulty_level } = req.body;
+        const { data, error } = await supabase
+            .from("problems")
+            .insert({ title, problem_statement, boilerplate_code, difficulty_level })
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json({ success: true, data });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get("/api/problems", async (req, res) => {
+    try {
+        const { data, error } = await supabase.from("problems").select("*").order("problem_id", { ascending: false });
+        if (error) throw error;
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get("/api/problems/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { data, error } = await supabase.from("problems").select("*").eq("problem_id", id).single();
+        if (error) throw error;
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.put("/api/problems/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, problem_statement, boilerplate_code, difficulty_level } = req.body;
+        const { data, error } = await supabase
+            .from("problems")
+            .update({ title, problem_statement, boilerplate_code, difficulty_level })
+            .eq("problem_id", id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete("/api/problems/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { error } = await supabase.from("problems").delete().eq("problem_id", id);
+        if (error) throw error;
+        res.status(200).json({ success: true, message: "Problem deleted" });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // 1. EVALUATION AND CODE VALIDATION ENDPOINT
 app.post("/api/evaluate-code", async (req, res) => {
     const { code, description, engine = "ollama" } = req.body;
@@ -114,9 +182,9 @@ app.post("/api/evaluate-code", async (req, res) => {
 
 // 2. DATABASE SUBMISSION ENDPOINT (Relational Inserts)
 app.post("/api/submissions", async (req, res) => {
-    const { userId, description, code, language, irOutput, translatedCode, validationStatus } = req.body;
+    const { userId, problemId, code, language, irOutput, translatedCode, validationStatus } = req.body;
 
-    if (!userId || !description || !code) {
+    if (!userId || !problemId || !code) {
         return res.status(400).json({ success: false, error: "Missing required fields for submission." });
     }
 
@@ -124,21 +192,12 @@ app.post("/api/submissions", async (req, res) => {
         console.log("Handling database inserts...");
         const authSupabase = createAuthClient(req);
 
-        // 1. Insert Problem dynamically
-        const { data: newProblem, error: problemError } = await authSupabase
-            .from("problems")
-            .insert({ problem_statement: description })
-            .select()
-            .single();
-
-        if (problemError) throw problemError;
-
-        // 2. Insert Submission
+        // 1. Insert Submission
         const { data: sub, error: subError } = await authSupabase
             .from("submissions")
             .insert({
                 user_id: userId,
-                problem_id: newProblem.problem_id,
+                problem_id: problemId,
                 source_code: code,
                 source_language: language,
                 validation_status: validationStatus || "pending",
