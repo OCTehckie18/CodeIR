@@ -9,7 +9,7 @@ export default function AuthForm() {
   const [role, setRole] = useState<"student" | "instructor">("student");
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [aiEngine, setAiEngine] = useState<"ollama" | "gemini">(
-    (localStorage.getItem("aiEngine") as "ollama" | "gemini") || "ollama"
+    (localStorage.getItem("aiEngine") as "ollama" | "gemini") || "ollama",
   );
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{
@@ -107,28 +107,49 @@ export default function AuthForm() {
 
       {/* ================= LEFT PANEL (Hero / Features) ================= */}
       <div className="hidden lg:flex w-1/2 h-full relative flex-col justify-center items-start p-16 xl:p-24 overflow-hidden z-10">
-
         <div className="mb-10 w-full max-w-xl">
           <div className="flex items-center gap-4 mb-8">
-            <img src={logo} alt="CodeIR Logo" className="h-12 w-auto drop-shadow-[0_0_15px_rgba(6,182,212,0.8)]" />
-            <span className="text-3xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">| CodeIR</span>
+            <img
+              src={logo}
+              alt="CodeIR Logo"
+              className="h-12 w-auto drop-shadow-[0_0_15px_rgba(6,182,212,0.8)]"
+            />
+            <span className="text-3xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+              | CodeIR
+            </span>
           </div>
 
           <h1 className="text-5xl xl:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
             Next-Gen Code <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Evaluation Engine</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+              Evaluation Engine
+            </span>
           </h1>
           <p className="text-lg xl:text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed font-light">
-            An intelligent platform offering real-time code evaluation, AI-driven insights with multiple models, and seamless collaboration between students and instructors.
+            An intelligent platform offering real-time code evaluation,
+            AI-driven insights with multiple models, and seamless collaboration
+            between students and instructors.
           </p>
         </div>
 
         {/* Feature Cards in Glassmorphism */}
         <div className="grid grid-cols-1 gap-4 w-full max-w-xl">
           {[
-            { Icon: Code, title: "Intelligent Coding", desc: "Write, test, and instantly evaluate code within an interactive environment." },
-            { Icon: Settings, title: "Multi-Model AI", desc: "Powered by edge-local Ollama and scalable cloud Gemini API." },
-            { Icon: Atom, title: "Real-time Metrics", desc: "Get comprehensive evaluation reports and instructor feedback." },
+            {
+              Icon: Code,
+              title: "Intelligent Coding",
+              desc: "Write, test, and instantly evaluate code within an interactive environment.",
+            },
+            {
+              Icon: Settings,
+              title: "Multi-Model AI",
+              desc: "Powered by edge-local Ollama and scalable cloud Gemini API.",
+            },
+            {
+              Icon: Atom,
+              title: "Real-time Metrics",
+              desc: "Get comprehensive evaluation reports and instructor feedback.",
+            },
           ].map((Item, idx) => (
             <div
               key={idx}
@@ -138,8 +159,12 @@ export default function AuthForm() {
                 <Item.Icon className="w-6 h-6 text-cyan-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-wide mb-1">{Item.title}</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">{Item.desc}</p>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-wide mb-1">
+                  {Item.title}
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {Item.desc}
+                </p>
               </div>
             </div>
           ))}
@@ -152,7 +177,6 @@ export default function AuthForm() {
 
         {/* Glassmorphism Form Container */}
         <div className="w-full max-w-[420px] p-8 sm:p-10 rounded-[2rem] border border-black/10 dark:border-white/10 bg-white/[0.03] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative">
-
           {/* Subtle inner highlight */}
           <div className="absolute inset-0 rounded-[2rem] border border-white/5 pointer-events-none mix-blend-overlay"></div>
 
@@ -169,7 +193,9 @@ export default function AuthForm() {
                 {mode === "login" ? "Welcome Back" : "Create Account"}
               </h2>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                {mode === "login" ? "Enter your credentials to access your workspace." : "Sign up to start evaluating your code intelligently."}
+                {mode === "login"
+                  ? "Enter your credentials to access your workspace."
+                  : "Sign up to start evaluating your code intelligently."}
               </p>
             </div>
           </div>
@@ -218,8 +244,12 @@ export default function AuthForm() {
                     }
                     disabled={loading}
                   >
-                    <option value="student" className="bg-[#0f172a]">Student</option>
-                    <option value="instructor" className="bg-[#0f172a]">Instructor</option>
+                    <option value="student" className="bg-[#0f172a]">
+                      Student
+                    </option>
+                    <option value="instructor" className="bg-[#0f172a]">
+                      Instructor
+                    </option>
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-600 dark:text-slate-400">
                     <ChevronDown size={18} />
@@ -233,14 +263,19 @@ export default function AuthForm() {
                 type="submit"
                 disabled={loading}
                 className={`w-full py-3.5 rounded-xl font-semibold text-sm tracking-wide transition-all duration-300 flex items-center justify-center
-                  ${loading
-                    ? "bg-cyan-700/50 text-slate-900 dark:text-white cursor-not-allowed"
-                    : "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-900 dark:text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transform hover:-translate-y-0.5"
+                  ${
+                    loading
+                      ? "bg-cyan-700/50 text-slate-900 dark:text-white cursor-not-allowed"
+                      : "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-900 dark:text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transform hover:-translate-y-0.5"
                   }
                 `}
               >
                 {loading ? (
-                  <img src={logo} alt="Loading" className="animate-float w-6 h-6 object-contain" />
+                  <img
+                    src={logo}
+                    alt="Loading"
+                    className="animate-float w-6 h-6 object-contain"
+                  />
                 ) : mode === "login" ? (
                   "Login"
                 ) : (
@@ -254,22 +289,31 @@ export default function AuthForm() {
                 disabled={loading}
                 className="text-sm text-slate-600 dark:text-slate-400 hover:text-cyan-400 transition-colors text-center w-full font-medium"
               >
-                {mode === "login" ? "Don't have an account? Sign up" : "Already have an account? Log in"}
+                {mode === "login"
+                  ? "Don't have an account? Sign up"
+                  : "Already have an account? Log in"}
               </button>
             </div>
 
             <div className="pt-6 animate-fade-in space-y-2 border-t border-black/10 dark:border-white/10 mt-6 relative z-10">
               <label className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1 font-semibold flex items-center gap-2">
-                <Atom size={14} className="text-cyan-400" /> AI Evaluation Engine
+                <Atom size={14} className="text-cyan-400" /> AI Evaluation
+                Engine
               </label>
               <div className="relative">
                 <select
                   className="w-full appearance-none bg-black/20 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-cyan-500/50 focus:bg-black/40 transition-all cursor-pointer shadow-inner"
                   value={aiEngine}
-                  onChange={(e) => setAiEngine(e.target.value as "ollama" | "gemini")}
+                  onChange={(e) =>
+                    setAiEngine(e.target.value as "ollama" | "gemini")
+                  }
                 >
-                  <option value="ollama" className="bg-[#0f172a]">Ollama (Local / CPU)</option>
-                  <option value="gemini" className="bg-[#0f172a]">Gemini (Cloud API)</option>
+                  <option value="ollama" className="bg-[#0f172a]">
+                    Ollama (Local / CPU)
+                  </option>
+                  <option value="gemini" className="bg-[#0f172a]">
+                    Gemini (Cloud API)
+                  </option>
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 dark:text-slate-500">
                   <ChevronDown size={14} />

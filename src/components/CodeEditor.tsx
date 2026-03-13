@@ -369,7 +369,7 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
                         scrollBeyondLastLine: false,
                         automaticLayout: true,
                         padding: { top: 16 },
-                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
                         lineHeight: 24,
                       }}
                     />

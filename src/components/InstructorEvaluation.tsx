@@ -285,7 +285,7 @@ export default function InstructorEvaluation({
                 options={{ 
                   minimap: { enabled: false }, 
                   fontSize: 13,
-                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
                 }}
               />
             </div>
