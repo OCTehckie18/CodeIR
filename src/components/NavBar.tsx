@@ -31,7 +31,12 @@ interface NavBarProps {
   email?: string;
 }
 
-export default function NavBar({ role, active, onNavigate, email }: NavBarProps) {
+export default function NavBar({
+  role,
+  active,
+  onNavigate,
+  email,
+}: NavBarProps) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
@@ -42,9 +47,7 @@ export default function NavBar({ role, active, onNavigate, email }: NavBarProps)
   const tabInactive =
     "text-slate-600 dark:text-slate-400 hover:text-cyan-400 pb-0.5";
 
-  const sep = (
-    <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
-  );
+  const sep = <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" />;
 
   // ── Student Nav ──
   if (role === "student") {
@@ -89,8 +92,12 @@ export default function NavBar({ role, active, onNavigate, email }: NavBarProps)
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <div className="text-right hidden sm:block">
-            <p className="text-xs text-slate-600 dark:text-slate-400">Student Account</p>
-            <p className="text-sm font-medium text-blue-300 truncate max-w-[160px]">{email}</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Student Account
+            </p>
+            <p className="text-sm font-medium text-blue-300 truncate max-w-[160px]">
+              {email}
+            </p>
           </div>
           <button
             id="nav-logout"
@@ -98,7 +105,10 @@ export default function NavBar({ role, active, onNavigate, email }: NavBarProps)
             title="Sign Out"
             className="p-2 rounded-full hover:bg-red-500/10 transition-colors group"
           >
-            <LogOut size={18} className="text-slate-500 dark:text-slate-400 group-hover:text-red-400 transition-colors" />
+            <LogOut
+              size={18}
+              className="text-slate-500 dark:text-slate-400 group-hover:text-red-400 transition-colors"
+            />
           </button>
         </div>
       </header>
@@ -147,8 +157,12 @@ export default function NavBar({ role, active, onNavigate, email }: NavBarProps)
       <div className="flex items-center gap-4">
         <ThemeToggle />
         <div className="text-right hidden sm:block">
-          <p className="text-xs text-slate-600 dark:text-slate-400">Instructor Account</p>
-          <p className="text-sm font-medium text-red-300 truncate max-w-[160px]">{email}</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            Instructor Account
+          </p>
+          <p className="text-sm font-medium text-red-300 truncate max-w-[160px]">
+            {email}
+          </p>
         </div>
         <button
           id="nav-logout"
@@ -156,7 +170,10 @@ export default function NavBar({ role, active, onNavigate, email }: NavBarProps)
           title="Sign Out"
           className="p-2 rounded-full hover:bg-red-500/10 transition-colors group"
         >
-          <LogOut size={18} className="text-slate-500 dark:text-slate-400 group-hover:text-red-400 transition-colors" />
+          <LogOut
+            size={18}
+            className="text-slate-500 dark:text-slate-400 group-hover:text-red-400 transition-colors"
+          />
         </button>
       </div>
     </header>

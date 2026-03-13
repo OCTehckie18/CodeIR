@@ -99,14 +99,18 @@ graph TD
 The data layer is a highly normalized relational model with strict Foreign Key constraints and sequential dependency requirements.
 
 ### 1. `auth.users` (Supabase Auth — user_metadata)
+
 Stores profile fields directly in Supabase Auth user metadata. No extra table needed.
+
 - `user_metadata.display_name` (Text)
 - `user_metadata.bio` (Text)
 - `user_metadata.theme_preference` (Text) — `'dark'` | `'light'`
 - `user_metadata.avatar_url` (Text)
 
 ### 2. `public.problems`
+
 The unit of practice, managed by instructors; sandbox submissions create placeholder rows.
+
 - `problem_id` (UUID, PK)
 - `title` (Text)
 - `problem_statement` (Text)
@@ -114,7 +118,9 @@ The unit of practice, managed by instructors; sandbox submissions create placeho
 - `difficulty_level` (Text) — `'Easy'` | `'Medium'` | `'Hard'`
 
 ### 3. `public.submissions`
+
 Append-only history of student attempts (drafts + valid submissions).
+
 - `submission_id` (UUID, PK)
 - `user_id` (UUID, FK → auth.users)
 - `problem_id` (UUID, FK → problems)
@@ -124,28 +130,36 @@ Append-only history of student attempts (drafts + valid submissions).
 - `submission_timestamp` (Timestamptz)
 
 ### 4. `public.pseudocodes`
+
 Strict 1-to-1 mapping of AI-generated IR to a valid submission.
+
 - `pseudocode_id` (UUID, PK)
 - `submission_id` (UUID, UNIQUE FK → submissions)
 - `structured_blocks` (JSONB)
 - `locked_status` (Boolean)
 
 ### 5. `public.translations`
+
 Target language outputs from a validated pseudocode block.
+
 - `translation_id` (UUID, PK)
 - `pseudocode_id` (UUID, FK → pseudocodes)
 - `target_language` (Text)
 - `translated_code` (Text)
 
 ### 6. `public.evaluations`
+
 Instructor rubric assessment tied to a submission.
+
 - `evaluation_id` (UUID, PK)
 - `submission_id` (UUID, FK → submissions)
 - `final_scores` (JSONB) — `{ correctness, efficiency, style }`
 - `teacher_feedback` (Text)
 
-### 7. `public.review_comments` *(New)*
+### 7. `public.review_comments` _(New)_
+
 Granular per-line code review annotations by instructors.
+
 - `comment_id` (UUID, PK)
 - `submission_id` (UUID, FK → submissions, ON DELETE CASCADE)
 - `instructor_id` (UUID) — auth.users.id of commenting instructor
@@ -159,44 +173,49 @@ Granular per-line code review annotations by instructors.
 ## API Endpoints
 
 ### Problem Bank
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/api/problems` | List all problems |
-| `GET` | `/api/problems/:id` | Get single problem |
-| `POST` | `/api/problems` | Create problem (instructor) |
-| `PUT` | `/api/problems/:id` | Update problem |
-| `DELETE` | `/api/problems/:id` | Delete problem |
+
+| Method   | Route               | Description                 |
+| -------- | ------------------- | --------------------------- |
+| `GET`    | `/api/problems`     | List all problems           |
+| `GET`    | `/api/problems/:id` | Get single problem          |
+| `POST`   | `/api/problems`     | Create problem (instructor) |
+| `PUT`    | `/api/problems/:id` | Update problem              |
+| `DELETE` | `/api/problems/:id` | Delete problem              |
 
 ### Submissions
-| Method | Route | Description |
-|---|---|---|
-| `POST` | `/api/submissions` | Submit validated code or save draft |
-| `PUT` | `/api/submissions/:id` | Update an existing draft |
-| `DELETE` | `/api/submissions/:id` | Delete a submission |
-| `GET` | `/api/submissions/user/:userId` | Get all submissions for a student |
 
-### Review Comments *(New)*
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/api/review-comments/:submissionId` | Fetch all comments for a submission |
-| `POST` | `/api/review-comments` | Add a new line comment |
-| `PUT` | `/api/review-comments/:commentId` | Edit a comment |
-| `DELETE` | `/api/review-comments/:commentId` | Delete a comment |
+| Method   | Route                           | Description                         |
+| -------- | ------------------------------- | ----------------------------------- |
+| `POST`   | `/api/submissions`              | Submit validated code or save draft |
+| `PUT`    | `/api/submissions/:id`          | Update an existing draft            |
+| `DELETE` | `/api/submissions/:id`          | Delete a submission                 |
+| `GET`    | `/api/submissions/user/:userId` | Get all submissions for a student   |
 
-### Profiles *(New)*
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/api/profiles/:userId` | Read user profile (from auth.users metadata) |
-| `PUT` | `/api/profiles/:userId` | Update display name, bio, theme |
+### Review Comments _(New)_
+
+| Method   | Route                                | Description                         |
+| -------- | ------------------------------------ | ----------------------------------- |
+| `GET`    | `/api/review-comments/:submissionId` | Fetch all comments for a submission |
+| `POST`   | `/api/review-comments`               | Add a new line comment              |
+| `PUT`    | `/api/review-comments/:commentId`    | Edit a comment                      |
+| `DELETE` | `/api/review-comments/:commentId`    | Delete a comment                    |
+
+### Profiles _(New)_
+
+| Method   | Route                   | Description                                        |
+| -------- | ----------------------- | -------------------------------------------------- |
+| `GET`    | `/api/profiles/:userId` | Read user profile (from auth.users metadata)       |
+| `PUT`    | `/api/profiles/:userId` | Update display name, bio, theme                    |
 | `DELETE` | `/api/profiles/:userId` | Delete / deactivate account (cascades submissions) |
 
 ### Evaluation & AI
-| Method | Route | Description |
-|---|---|---|
-| `POST` | `/api/evaluate-code` | Validate code + generate IR + translations |
-| `POST` | `/api/evaluations` | Submit instructor rubric evaluation |
-| `GET` | `/api/evaluations/:submissionId` | Get evaluation for a submission |
-| `GET` | `/api/instructor/dashboard` | Aggregated view of all submissions |
+
+| Method | Route                            | Description                                |
+| ------ | -------------------------------- | ------------------------------------------ |
+| `POST` | `/api/evaluate-code`             | Validate code + generate IR + translations |
+| `POST` | `/api/evaluations`               | Submit instructor rubric evaluation        |
+| `GET`  | `/api/evaluations/:submissionId` | Get evaluation for a submission            |
+| `GET`  | `/api/instructor/dashboard`      | Aggregated view of all submissions         |
 
 ---
 
@@ -215,6 +234,7 @@ System Action (e.g., create sandbox problem placeholder)
 ```
 
 **Core policies:**
+
 ```sql
 -- Students can only see and modify their own submissions
 CREATE POLICY "submissions_insert_own" ON submissions
@@ -231,6 +251,7 @@ CREATE POLICY "review_comments_select_student" ON review_comments
 ```
 
 **Data integrity cascades:**
+
 - `ON DELETE CASCADE` on `submissions` → pseudocodes, evaluations, review_comments deleted when submission deleted
 - `ON DELETE CASCADE` on `auth.users` → all student data deleted when account deleted
 
@@ -288,12 +309,14 @@ cd backend && npm install && cd ..
 ### Step 2: Environment Configuration
 
 **Frontend** — create `/.env`:
+
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 **Backend** — create `/backend/.env`:
+
 ```env
 PORT=5000
 SUPABASE_URL=your_supabase_project_url
@@ -306,6 +329,7 @@ GEMINI_API_KEY=your_google_gemini_key
 Run the following in **Supabase → SQL Editor** (in order):
 
 1. Add columns to `problems` table (if not already present):
+
 ```sql
 ALTER TABLE problems
   ADD COLUMN IF NOT EXISTS title            TEXT,
@@ -314,6 +338,7 @@ ALTER TABLE problems
 ```
 
 2. Create `review_comments` table:
+
 ```sql
 CREATE TABLE IF NOT EXISTS review_comments (
     comment_id    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -353,17 +378,17 @@ npm run dev
 
 ### Role-Based Access Control (RBAC)
 
-| Feature | Student | Instructor |
-|---|---|---|
-| Code Editor (Monaco) | ✅ | ✅ (read-only view) |
-| Problem Bank | ✅ Read + Solve | ✅ Full CRUD |
-| Submit Solution | ✅ | — |
-| Save Draft | ✅ | — |
-| Student Dashboard (heatmap, stats, rank) | ✅ | — |
-| Profile Settings (name, bio, theme) | ✅ | ✅ |
-| Instructor Evaluation View | — | ✅ |
-| Rubric Scoring | — | ✅ |
-| Granular Line Comments | — | ✅ (Full CRUD) |
+| Feature                                  | Student         | Instructor          |
+| ---------------------------------------- | --------------- | ------------------- |
+| Code Editor (Monaco)                     | ✅              | ✅ (read-only view) |
+| Problem Bank                             | ✅ Read + Solve | ✅ Full CRUD        |
+| Submit Solution                          | ✅              | —                   |
+| Save Draft                               | ✅              | —                   |
+| Student Dashboard (heatmap, stats, rank) | ✅              | —                   |
+| Profile Settings (name, bio, theme)      | ✅              | ✅                  |
+| Instructor Evaluation View               | —               | ✅                  |
+| Rubric Scoring                           | —               | ✅                  |
+| Granular Line Comments                   | —               | ✅ (Full CRUD)      |
 
 ### AI-Powered Code Validation Pipeline
 
@@ -375,6 +400,7 @@ npm run dev
 ### Draft Management
 
 Students can save unvalidated work-in-progress:
+
 - **Save Draft** — Persists code without requiring validation (`validation_status: 'draft'`).
 - **Update Draft** — Subsequent saves update the existing draft row (no duplicates).
 - **Resume Later** — Drafts appear in Student Dashboard like any other submission.
@@ -382,6 +408,7 @@ Students can save unvalidated work-in-progress:
 ### Granular Code Review Comments
 
 Instructors can annotate submissions line-by-line in the `InstructorEvaluation` view:
+
 - **Add** — Pick a line number (0 = general), choose a type badge, write the comment.
 - **Edit** — Inline edit with pencil button (hover to reveal).
 - **Delete** — Trash icon with confirm dialog.
@@ -390,6 +417,7 @@ Instructors can annotate submissions line-by-line in the `InstructorEvaluation` 
 ### User Profile System
 
 Profiles are persisted to Supabase `auth.users.user_metadata`:
+
 - **Display Name** — Shown on Student Dashboard and leaderboard rank badge.
 - **Bio** — Short self-description visible on the profile card.
 - **Theme Preference** — Dark / Light mode saved to DB, applied on any device at login.
@@ -398,6 +426,7 @@ Profiles are persisted to Supabase `auth.users.user_metadata`:
 ### Student Dashboard
 
 A LeetCode-style analytics dashboard:
+
 - **Contribution Heatmap** — 12-week calendar showing submission frequency.
 - **Rank System** — Novice → Apprentice → Intermediate → Expert based on problems solved.
 - **Live Stats** — Total solved, current streak, average score across all evaluations.
@@ -406,6 +435,7 @@ A LeetCode-style analytics dashboard:
 ### Offline Manual Evaluation Mode
 
 If an instructor opens the evaluation view without a linked submission:
+
 - The Monaco editor is fully writable for manual testing.
 - The backend creates a ghost submission record to anchor rubric grades to the database.
 - All line comments require an active submission ID (shown with a placeholder message).

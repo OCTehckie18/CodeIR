@@ -8,17 +8,15 @@ import StudentDashboard from "./components/StudentDashboard";
 import ProblemList from "./components/ProblemList"; // New Import
 import PageLoader from "./components/PageLoader";
 
-
-
 function App() {
   const [session, setSession] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // VIEW STATES
-  const [studentView, setStudentView] = useState<"editor" | "dashboard" | "problems">(
-    "dashboard",
-  );
+  const [studentView, setStudentView] = useState<
+    "editor" | "dashboard" | "problems"
+  >("dashboard");
   const [selectedProblem, setSelectedProblem] = useState<any>(null); // To pass problem to editor
 
   // INSTRUCTOR STATES
@@ -88,9 +86,7 @@ function App() {
         />
       );
     } else if (instructorView === "problems") {
-      return (
-        <ProblemList role="instructor" onNavigate={setInstructorView} />
-      );
+      return <ProblemList role="instructor" onNavigate={setInstructorView} />;
     }
   }
 

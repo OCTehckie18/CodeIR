@@ -171,7 +171,7 @@ async function generateAIContent(engine, prompt) {
         } catch (error) {
             const errorMsg = error.response ? `Status: ${error.response.status} - ${JSON.stringify(error.response.data)}` : error.message;
             console.error("Ollama Error:", errorMsg);
-            
+
             if (error.code === 'ECONNABORTED') {
                 throw new Error("Ollama request timed out. The 7B model might be slow on your CPU.");
             }

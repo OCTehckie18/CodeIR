@@ -13,9 +13,11 @@ import {
 import NavBar from "./NavBar";
 import PageLoader from "./PageLoader";
 
-
 interface InstructorDashboardProps {
-  onNavigate: (view: "dashboard" | "evaluation" | "problems", submissionId?: string) => void;
+  onNavigate: (
+    view: "dashboard" | "evaluation" | "problems",
+    submissionId?: string,
+  ) => void;
 }
 
 export default function InstructorDashboard({
@@ -26,7 +28,9 @@ export default function InstructorDashboard({
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ pending: 0, evaluated: 0, total: 0 });
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "evaluated">("all");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "pending" | "evaluated"
+  >("all");
   const [isSearchVisible, setIsSearchVisible] = useState(false);
 
   useEffect(() => {
@@ -41,12 +45,17 @@ export default function InstructorDashboard({
       if (!session) return;
       setUser(session.user);
 
-      const response = await axios.get("http://127.0.0.1:5000/api/instructor/dashboard", {
-        headers: { Authorization: `Bearer ${session.access_token}` }
-      });
+      const response = await axios.get(
+        "http://127.0.0.1:5000/api/instructor/dashboard",
+        {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        },
+      );
 
       if (!response.data.success) {
-        throw new Error(response.data.error || "Failed to fetch instructor dashboard data");
+        throw new Error(
+          response.data.error || "Failed to fetch instructor dashboard data",
+        );
       }
 
       const safeData = response.data.data || [];
@@ -55,7 +64,11 @@ export default function InstructorDashboard({
       // Calculate Stats
       const total = safeData.length;
       const evaluated = safeData.filter(
-        (s: any) => s.evaluations && (Array.isArray(s.evaluations) ? s.evaluations.length > 0 : Object.keys(s.evaluations).length > 0),
+        (s: any) =>
+          s.evaluations &&
+          (Array.isArray(s.evaluations)
+            ? s.evaluations.length > 0
+            : Object.keys(s.evaluations).length > 0),
       ).length;
       const pending = total - evaluated;
 
@@ -68,9 +81,13 @@ export default function InstructorDashboard({
   };
 
   const filteredSubmissions = submissions.filter((sub) => {
-    const evalObj = sub.evaluations ? (Array.isArray(sub.evaluations) ? sub.evaluations[0] : sub.evaluations) : null;
+    const evalObj = sub.evaluations
+      ? Array.isArray(sub.evaluations)
+        ? sub.evaluations[0]
+        : sub.evaluations
+      : null;
     const isEvaluated = !!evalObj && !!evalObj.final_scores;
-    
+
     // Status Filter
     if (filterStatus === "pending" && isEvaluated) return false;
     if (filterStatus === "evaluated" && !isEvaluated) return false;
@@ -78,8 +95,10 @@ export default function InstructorDashboard({
     // Search Query (Student ID or Problem Statement)
     const searchLower = searchQuery.toLowerCase();
     const studentIdMatch = sub.user_id.toLowerCase().includes(searchLower);
-    const problemMatch = sub.problems?.problem_statement?.toLowerCase().includes(searchLower);
-    
+    const problemMatch = sub.problems?.problem_statement
+      ?.toLowerCase()
+      .includes(searchLower);
+
     return studentIdMatch || problemMatch;
   });
 
@@ -89,11 +108,15 @@ export default function InstructorDashboard({
     return <PageLoader message="Loading Dashboard..." />;
   }
 
-
   return (
     <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden">
       {/* SHARED NAV BAR */}
-      <NavBar role="instructor" active="dashboard" onNavigate={onNavigate} email={user?.email} />
+      <NavBar
+        role="instructor"
+        active="dashboard"
+        onNavigate={onNavigate}
+        email={user?.email}
+      />
 
       <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
         <div className="flex flex-col lg:flex-row gap-6 w-full min-h-full p-4 lg:p-6">
@@ -101,7 +124,7 @@ export default function InstructorDashboard({
           <div className="w-full lg:w-[320px] flex-shrink-0 flex flex-col gap-5">
             <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-6 flex flex-col shadow-lg relative overflow-hidden group">
               <div className="absolute -top-20 -right-20 w-40 h-40 bg-red-600/10 blur-[60px] rounded-full pointer-events-none transition-all group-hover:bg-red-500/20"></div>
-              
+
               <div className="flex gap-4 items-center mb-6">
                 <div className="h-24 w-24 rounded-[1.25rem] bg-gradient-to-br from-red-500 to-rose-600 p-[2px] shadow-[0_4px_20px_rgba(225,29,72,0.2)]">
                   <div className="h-full w-full rounded-[1.15rem] bg-slate-50 dark:bg-slate-950 flex items-center justify-center overflow-hidden">
@@ -112,30 +135,45 @@ export default function InstructorDashboard({
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight truncate">
                     Prof. {user?.email?.split("@")[0] || "Instructor"}
                   </h2>
-                  <p className="text-sm text-red-400 font-medium mt-0.5">Senior Evaluator</p>
+                  <p className="text-sm text-red-400 font-medium mt-0.5">
+                    Senior Evaluator
+                  </p>
                 </div>
               </div>
 
               <div className="w-full border-t border-white/5 pt-5 z-10 space-y-4">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-600 dark:text-slate-400 font-medium">Department</span>
-                  <span className="text-slate-800 dark:text-slate-200">CompSci</span>
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">
+                    Department
+                  </span>
+                  <span className="text-slate-800 dark:text-slate-200">
+                    CompSci
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-600 dark:text-slate-400 font-medium">Term</span>
-                  <span className="text-slate-800 dark:text-slate-200">Fall 2026</span>
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">
+                    Term
+                  </span>
+                  <span className="text-slate-800 dark:text-slate-200">
+                    Fall 2026
+                  </span>
                 </div>
               </div>
             </div>
-            
-             {/* Quick Actions Card */}
+
+            {/* Quick Actions Card */}
             <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-lg">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 tracking-wide">Quick Actions</h3>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 tracking-wide">
+                Quick Actions
+              </h3>
               <div className="flex flex-col gap-3">
-                 <button onClick={() => onNavigate("evaluation")} className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-bold border border-red-500/20 rounded-xl transition-colors text-left px-4 flex justify-between items-center">
-                   Go to Sandbox
-                   <ChevronRight size={16} />
-                 </button>
+                <button
+                  onClick={() => onNavigate("evaluation")}
+                  className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-bold border border-red-500/20 rounded-xl transition-colors text-left px-4 flex justify-between items-center"
+                >
+                  Go to Sandbox
+                  <ChevronRight size={16} />
+                </button>
               </div>
             </div>
           </div>
@@ -152,8 +190,12 @@ export default function InstructorDashboard({
                     <Clock size={22} className="text-orange-400" />
                   </div>
                 </div>
-                <h3 className="text-sm font-semibold text-orange-200/80 mb-1">Pending Reviews</h3>
-                <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.pending}</span>
+                <h3 className="text-sm font-semibold text-orange-200/80 mb-1">
+                  Pending Reviews
+                </h3>
+                <span className="text-4xl font-black text-slate-900 dark:text-white">
+                  {stats.pending}
+                </span>
               </div>
 
               {/* Evaluated */}
@@ -164,8 +206,12 @@ export default function InstructorDashboard({
                     <CheckCircle2 size={22} className="text-emerald-400" />
                   </div>
                 </div>
-                <h3 className="text-sm font-semibold text-emerald-200/80 mb-1">Evaluated</h3>
-                <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.evaluated}</span>
+                <h3 className="text-sm font-semibold text-emerald-200/80 mb-1">
+                  Evaluated
+                </h3>
+                <span className="text-4xl font-black text-slate-900 dark:text-white">
+                  {stats.evaluated}
+                </span>
               </div>
 
               {/* Total */}
@@ -176,8 +222,12 @@ export default function InstructorDashboard({
                     <FileText size={22} className="text-blue-400" />
                   </div>
                 </div>
-                <h3 className="text-sm font-semibold text-blue-200/80 mb-1">Total Submissions</h3>
-                <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.total}</span>
+                <h3 className="text-sm font-semibold text-blue-200/80 mb-1">
+                  Total Submissions
+                </h3>
+                <span className="text-4xl font-black text-slate-900 dark:text-white">
+                  {stats.total}
+                </span>
               </div>
             </div>
 
@@ -185,32 +235,44 @@ export default function InstructorDashboard({
             <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-lg overflow-hidden flex flex-col flex-1 min-h-[400px]">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 tracking-wide whitespace-nowrap">
-                   Active Submissions
+                  Active Submissions
                 </h3>
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                   {/* Search Input Container */}
-                  <div className={`flex items-center gap-2 bg-white/[0.04] border border-white/5 rounded-xl px-3 py-1.5 transition-all duration-300 overflow-hidden ${isSearchVisible ? 'w-full md:w-64 opacity-100' : 'w-10 opacity-0 md:opacity-100 md:w-10'}`}>
-                    <Search size={16} className="text-slate-500 shrink-0" onClick={() => setIsSearchVisible(!isSearchVisible)} />
-                    <input 
-                      type="text" 
+                  <div
+                    className={`flex items-center gap-2 bg-white/[0.04] border border-white/5 rounded-xl px-3 py-1.5 transition-all duration-300 overflow-hidden ${isSearchVisible ? "w-full md:w-64 opacity-100" : "w-10 opacity-0 md:opacity-100 md:w-10"}`}
+                  >
+                    <Search
+                      size={16}
+                      className="text-slate-500 shrink-0"
+                      onClick={() => setIsSearchVisible(!isSearchVisible)}
+                    />
+                    <input
+                      type="text"
                       placeholder="Search Student ID or Problem..."
-                      className={`bg-transparent border-none outline-none text-xs text-slate-300 w-full placeholder:text-slate-600 transition-opacity duration-300 ${isSearchVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                      className={`bg-transparent border-none outline-none text-xs text-slate-300 w-full placeholder:text-slate-600 transition-opacity duration-300 ${isSearchVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  
+
                   {/* Filter Dropdown */}
                   <div className="flex items-center gap-2 bg-white/[0.04] border border-white/5 rounded-xl px-2 py-1.5 hover:bg-white/[0.08] transition-colors">
                     <Filter size={14} className="text-slate-500" />
-                    <select 
+                    <select
                       className="bg-transparent border-none outline-none text-xs text-slate-300 font-medium cursor-pointer appearance-none pr-4"
                       value={filterStatus}
                       onChange={(e) => setFilterStatus(e.target.value as any)}
                     >
-                      <option value="all" className="bg-slate-900">All Status</option>
-                      <option value="pending" className="bg-slate-900">Pending</option>
-                      <option value="evaluated" className="bg-slate-900">Evaluated</option>
+                      <option value="all" className="bg-slate-900">
+                        All Status
+                      </option>
+                      <option value="pending" className="bg-slate-900">
+                        Pending
+                      </option>
+                      <option value="evaluated" className="bg-slate-900">
+                        Evaluated
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -230,12 +292,16 @@ export default function InstructorDashboard({
                   </thead>
                   <tbody>
                     {filteredSubmissions.map((sub) => {
-                      const evalObj = sub.evaluations ? (Array.isArray(sub.evaluations) ? sub.evaluations[0] : sub.evaluations) : null;
+                      const evalObj = sub.evaluations
+                        ? Array.isArray(sub.evaluations)
+                          ? sub.evaluations[0]
+                          : sub.evaluations
+                        : null;
                       const isEvaluated = !!evalObj && !!evalObj.final_scores;
                       const score = isEvaluated
                         ? (evalObj.final_scores.correctness || 0) +
-                        (evalObj.final_scores.efficiency || 0) +
-                        (evalObj.final_scores.style || 0)
+                          (evalObj.final_scores.efficiency || 0) +
+                          (evalObj.final_scores.style || 0)
                         : null;
 
                       return (
@@ -248,20 +314,35 @@ export default function InstructorDashboard({
                           </td>
                           <td className="px-4 py-4 text-slate-800 dark:text-slate-200 font-medium max-w-[200px] truncate">
                             {sub.problems?.problem_statement
-                              ? sub.problems.problem_statement.slice(0, 35) + (sub.problems.problem_statement.length > 35 ? "..." : "")
+                              ? sub.problems.problem_statement.slice(0, 35) +
+                                (sub.problems.problem_statement.length > 35
+                                  ? "..."
+                                  : "")
                               : "Untitled Problem"}
                           </td>
                           <td className="px-4 py-4">
                             <div className="font-mono text-[11px] text-slate-400/80 bg-slate-950/50 px-2 py-1 rounded inline-block border border-white/5 max-w-[120px] truncate">
-                              {sub.source_code ? sub.source_code.slice(0, 20) + "..." : "-"}
+                              {sub.source_code
+                                ? sub.source_code.slice(0, 20) + "..."
+                                : "-"}
                             </div>
                           </td>
                           <td className="px-4 py-4">
                             <div className="text-xs text-slate-700 dark:text-slate-300">
-                              {new Date(sub.submission_timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              {new Date(
+                                sub.submission_timestamp,
+                              ).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })}
                             </div>
                             <div className="text-[10px] text-slate-500 dark:text-slate-500 mt-0.5">
-                              {new Date(sub.submission_timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              {new Date(
+                                sub.submission_timestamp,
+                              ).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </div>
                           </td>
                           <td className="px-4 py-4">
@@ -271,7 +352,9 @@ export default function InstructorDashboard({
                                   Evaluated
                                 </span>
                                 {score !== null && (
-                                  <span className="text-xs font-mono font-medium text-emerald-300 mt-0.5">{score}/30 Pts</span>
+                                  <span className="text-xs font-mono font-medium text-emerald-300 mt-0.5">
+                                    {score}/30 Pts
+                                  </span>
                                 )}
                               </div>
                             ) : (
@@ -282,7 +365,9 @@ export default function InstructorDashboard({
                           </td>
                           <td className="px-4 py-4 text-right rounded-r-xl">
                             <button
-                              onClick={() => onNavigate("evaluation", sub.submission_id)}
+                              onClick={() =>
+                                onNavigate("evaluation", sub.submission_id)
+                              }
                               className="px-3 py-1.5 text-xs font-bold bg-white/[0.05] hover:bg-red-500 text-slate-700 dark:text-slate-300 hover:text-white rounded border border-black/10 dark:border-white/10 hover:border-red-400 transition-all ml-auto inline-flex items-center gap-1.5"
                             >
                               {isEvaluated ? "View" : "Grade"}
@@ -294,8 +379,13 @@ export default function InstructorDashboard({
                     })}
                     {filteredSubmissions.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="py-12 text-center text-slate-500 dark:text-slate-500 font-medium bg-white/[0.01] rounded-xl">
-                          {searchQuery || filterStatus !== 'all' ? "No submissions match your criteria." : "No submissions available."}
+                        <td
+                          colSpan={6}
+                          className="py-12 text-center text-slate-500 dark:text-slate-500 font-medium bg-white/[0.01] rounded-xl"
+                        >
+                          {searchQuery || filterStatus !== "all"
+                            ? "No submissions match your criteria."
+                            : "No submissions available."}
                         </td>
                       </tr>
                     )}

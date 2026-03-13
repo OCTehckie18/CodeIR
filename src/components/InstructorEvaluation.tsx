@@ -11,7 +11,11 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels";
+import {
+  Panel,
+  Group as PanelGroup,
+  Separator as PanelResizeHandle,
+} from "react-resizable-panels";
 import logo from "../assets/no-bg-white-logo.png";
 import NavBar from "./NavBar";
 import ReviewComments from "./ReviewComments";
@@ -46,7 +50,9 @@ export default function InstructorEvaluation({
     style: 0,
   });
   const [user, setUser] = useState<any>(null);
-  const [activeBottomTab, setActiveBottomTab] = useState<"feedback" | "comments">("feedback");
+  const [activeBottomTab, setActiveBottomTab] = useState<
+    "feedback" | "comments"
+  >("feedback");
 
   // --- Fetch User & Specific Submission ---
   useEffect(() => {
@@ -59,12 +65,17 @@ export default function InstructorEvaluation({
       if (submissionId) {
         // FETCH SPECIFIC SUBMISSION BASED ON ID
         try {
-          const response = await axios.get(`http://127.0.0.1:5000/api/submissions/${submissionId}`, {
-            headers: { Authorization: `Bearer ${session?.access_token}` }
-          });
+          const response = await axios.get(
+            `http://127.0.0.1:5000/api/submissions/${submissionId}`,
+            {
+              headers: { Authorization: `Bearer ${session?.access_token}` },
+            },
+          );
 
           if (!response.data.success) {
-            throw new Error(response.data.error || "Failed to fetch submission details");
+            throw new Error(
+              response.data.error || "Failed to fetch submission details",
+            );
           }
 
           const data = response.data.data;
@@ -72,9 +83,11 @@ export default function InstructorEvaluation({
           setCode(data.source_code || "");
           if (data.language) setLanguage(data.language);
           if (data.pseudocodes) {
-            setIrView(typeof data.pseudocodes.structured_blocks === 'string'
-              ? data.pseudocodes.structured_blocks
-              : JSON.stringify(data.pseudocodes.structured_blocks, null, 2));
+            setIrView(
+              typeof data.pseudocodes.structured_blocks === "string"
+                ? data.pseudocodes.structured_blocks
+                : JSON.stringify(data.pseudocodes.structured_blocks, null, 2),
+            );
           }
           if (data.evaluations && data.evaluations.length > 0) {
             const ev = data.evaluations[0];
@@ -104,18 +117,26 @@ export default function InstructorEvaluation({
   const handleAISuggestion = async () => {
     setIsAutoGrading(true);
     try {
-      const description = submission?.problems?.problem_statement || "Instructor evaluating manual code via dashboard.";
+      const description =
+        submission?.problems?.problem_statement ||
+        "Instructor evaluating manual code via dashboard.";
       const engine = localStorage.getItem("aiEngine") || "ollama";
       const payload = { code, description, engine };
-      const response = await axios.post("http://127.0.0.1:5000/api/auto-grade", payload);
+      const response = await axios.post(
+        "http://127.0.0.1:5000/api/auto-grade",
+        payload,
+      );
 
       if (response.data.success && response.data.data) {
         setScores({
           correctness: response.data.data.correctness || 0,
           efficiency: response.data.data.efficiency || 0,
-          style: response.data.data.style || 0
+          style: response.data.data.style || 0,
         });
-        setFeedback(response.data.data.feedback || "Code evaluated successfully by Gemini.");
+        setFeedback(
+          response.data.data.feedback ||
+            "Code evaluated successfully by Gemini.",
+        );
       } else {
         alert("Failed to auto-grade code: " + response.data.error);
       }
@@ -132,22 +153,38 @@ export default function InstructorEvaluation({
     setIsValidating(true);
     setIrView("{\n  'status': 'Generating IR... Please wait...'\n}");
     try {
-      const description = submission?.problems?.problem_statement || "Evaluate this code.";
+      const description =
+        submission?.problems?.problem_statement || "Evaluate this code.";
       const engine = localStorage.getItem("aiEngine") || "ollama";
       const payload = { code, description, engine };
-      const response = await axios.post("http://127.0.0.1:5000/api/evaluate-code", payload);
+      const response = await axios.post(
+        "http://127.0.0.1:5000/api/evaluate-code",
+        payload,
+      );
 
       if (response.data.success) {
         if (response.data.status === "valid") {
           setIrView(response.data.irOutput);
         } else {
-          setIrView("{\n  'status': 'Validation Failed',\n  'feedback': " + JSON.stringify(response.data.feedback) + "\n}");
+          setIrView(
+            "{\n  'status': 'Validation Failed',\n  'feedback': " +
+              JSON.stringify(response.data.feedback) +
+              "\n}",
+          );
         }
       } else {
-        setIrView("{\n  'status': 'Validation Error',\n  'error': " + JSON.stringify(response.data.error) + "\n}");
+        setIrView(
+          "{\n  'status': 'Validation Error',\n  'error': " +
+            JSON.stringify(response.data.error) +
+            "\n}",
+        );
       }
     } catch (error: any) {
-      setIrView("{\n  'status': 'Connection Error',\n  'error': " + JSON.stringify(error.message) + "\n}");
+      setIrView(
+        "{\n  'status': 'Connection Error',\n  'error': " +
+          JSON.stringify(error.message) +
+          "\n}",
+      );
     } finally {
       setIsValidating(false);
     }
@@ -159,7 +196,9 @@ export default function InstructorEvaluation({
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       let targetSubmissionId = submission?.submission_id;
 
@@ -172,14 +211,21 @@ export default function InstructorEvaluation({
           language: language,
           irOutput: irView,
           translatedCode: "// Offline manually graded code",
-          validationStatus: "valid"
+          validationStatus: "valid",
         };
-        const subRes = await axios.post("http://127.0.0.1:5000/api/submissions", subPayload, {
-          headers: { Authorization: `Bearer ${session?.access_token}` }
-        });
+        const subRes = await axios.post(
+          "http://127.0.0.1:5000/api/submissions",
+          subPayload,
+          {
+            headers: { Authorization: `Bearer ${session?.access_token}` },
+          },
+        );
 
         if (!subRes.data.success) {
-          throw new Error(subRes.data.error || "Failed to establish offline student profile submission");
+          throw new Error(
+            subRes.data.error ||
+              "Failed to establish offline student profile submission",
+          );
         }
         targetSubmissionId = subRes.data.submissionId;
       }
@@ -188,21 +234,32 @@ export default function InstructorEvaluation({
         submissionId: targetSubmissionId,
         instructorId: user.id,
         scores,
-        feedback
+        feedback,
       };
 
-      const response = await axios.post("http://127.0.0.1:5000/api/evaluations", payload, {
-        headers: { Authorization: `Bearer ${session?.access_token}` }
-      });
+      const response = await axios.post(
+        "http://127.0.0.1:5000/api/evaluations",
+        payload,
+        {
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+        },
+      );
 
       if (!response.data.success) {
         throw new Error(response.data.error || "Failed to save evaluation");
       }
 
-      alert(submission ? "Evaluation saved successfully!" : "Offline Evaluation & Submission securely saved to database!");
+      alert(
+        submission
+          ? "Evaluation saved successfully!"
+          : "Offline Evaluation & Submission securely saved to database!",
+      );
       onNavigate("dashboard");
     } catch (error: any) {
-      alert("Error saving evaluation: " + (error.response?.data?.error || error.message));
+      alert(
+        "Error saving evaluation: " +
+          (error.response?.data?.error || error.message),
+      );
       console.error(error);
     } finally {
       setLoading(false);
@@ -222,16 +279,21 @@ export default function InstructorEvaluation({
       {!submission && (
         <div className="flex items-center gap-2 px-6 py-1.5 bg-blue-500/10 border-b border-blue-500/20">
           <CodeIcon size={12} className="text-blue-400" />
-          <span className="text-xs text-blue-300 font-semibold tracking-wide">MANUAL EVALUATION MODE — No submission linked</span>
+          <span className="text-xs text-blue-300 font-semibold tracking-wide">
+            MANUAL EVALUATION MODE — No submission linked
+          </span>
         </div>
       )}
 
       {/* ================= MAIN CONTENT (Draggable Panels) ================= */}
       <div className="flex-1 p-4 overflow-hidden min-h-0 flex">
         <PanelGroup orientation="horizontal">
-          
           {/* COLUMN 1: CODE EDITOR */}
-          <Panel defaultSize={35} minSize={20} className="flex flex-col h-full rounded-xl border border-blue-500/30 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(59,130,246,0.1)] relative">
+          <Panel
+            defaultSize={35}
+            minSize={20}
+            className="flex flex-col h-full rounded-xl border border-blue-500/30 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(59,130,246,0.1)] relative"
+          >
             <div className="px-4 py-3 bg-blue-900/20 border-b border-blue-500/20 flex justify-between items-center">
               <span className="text-sm font-semibold text-blue-300 flex items-center gap-2">
                 <CodeIcon size={16} /> Student Source Code
@@ -242,7 +304,15 @@ export default function InstructorEvaluation({
                   disabled={isValidating}
                   className="flex items-center gap-1 text-[10px] bg-blue-500 hover:bg-blue-400 text-slate-900 dark:text-white px-2 py-1 rounded transition-colors shadow-lg shadow-blue-500/20 disabled:bg-slate-700 disabled:text-slate-400"
                 >
-                  {isValidating ? <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain" /> : <Sparkles size={10} />}
+                  {isValidating ? (
+                    <img
+                      src={logo}
+                      alt="Loading"
+                      className="animate-float w-3 h-3 object-contain"
+                    />
+                  ) : (
+                    <Sparkles size={10} />
+                  )}
                   {isValidating ? "Validating..." : "Validate Code"}
                 </button>
                 <select
@@ -282,10 +352,11 @@ export default function InstructorEvaluation({
                 theme="vs-dark"
                 value={code}
                 onChange={(val) => setCode(val || "")}
-                options={{ 
-                  minimap: { enabled: false }, 
+                options={{
+                  minimap: { enabled: false },
                   fontSize: 13,
-                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                  fontFamily:
+                    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
                 }}
               />
             </div>
@@ -297,7 +368,11 @@ export default function InstructorEvaluation({
           </PanelResizeHandle>
 
           {/* COLUMN 2: IR VIEW */}
-          <Panel defaultSize={35} minSize={20} className="flex flex-col h-full rounded-xl border border-yellow-500/30 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(234,179,8,0.1)] relative">
+          <Panel
+            defaultSize={35}
+            minSize={20}
+            className="flex flex-col h-full rounded-xl border border-yellow-500/30 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(234,179,8,0.1)] relative"
+          >
             <div className="px-4 py-3 bg-yellow-900/20 border-b border-yellow-500/20 flex justify-between items-center">
               <span className="text-sm font-semibold text-yellow-300 flex items-center gap-2">
                 <FileJson size={16} /> Structured IR View
@@ -318,11 +393,18 @@ export default function InstructorEvaluation({
           </PanelResizeHandle>
 
           {/* COLUMN 3: RUBRIC AND FEEDBACK */}
-          <Panel defaultSize={30} minSize={25} className="flex flex-col h-full min-h-0">
+          <Panel
+            defaultSize={30}
+            minSize={25}
+            className="flex flex-col h-full min-h-0"
+          >
             <PanelGroup orientation="vertical">
-              
               {/* RUBRIC BOX */}
-              <Panel defaultSize={60} minSize={30} className="flex flex-col pb-2 relative">
+              <Panel
+                defaultSize={60}
+                minSize={30}
+                className="flex flex-col pb-2 relative"
+              >
                 <div className="h-full flex flex-col rounded-xl border border-pink-500/30 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(236,72,153,0.1)]">
                   <div className="px-4 py-3 bg-pink-900/20 border-b border-pink-500/20 flex justify-between items-center">
                     <span className="text-sm font-semibold text-pink-300 flex items-center gap-2">
@@ -333,7 +415,15 @@ export default function InstructorEvaluation({
                       disabled={isAutoGrading}
                       className="flex items-center gap-1 text-[10px] bg-pink-500 hover:bg-pink-400 text-slate-900 dark:text-white px-2 py-1 rounded transition-colors shadow-lg shadow-pink-500/20 disabled:bg-slate-700 disabled:text-slate-400"
                     >
-                      {isAutoGrading ? <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain" /> : <Sparkles size={10} />}
+                      {isAutoGrading ? (
+                        <img
+                          src={logo}
+                          alt="Loading"
+                          className="animate-float w-3 h-3 object-contain"
+                        />
+                      ) : (
+                        <Sparkles size={10} />
+                      )}
                       {isAutoGrading ? "Grading..." : "Auto-Grade"}
                     </button>
                   </div>
@@ -396,7 +486,10 @@ export default function InstructorEvaluation({
                         max="10"
                         value={scores.style}
                         onChange={(e) =>
-                          setScores({ ...scores, style: parseInt(e.target.value) })
+                          setScores({
+                            ...scores,
+                            style: parseInt(e.target.value),
+                          })
                         }
                         className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
                       />
@@ -405,10 +498,14 @@ export default function InstructorEvaluation({
 
                   <div className="px-5 pb-4 pt-2 border-t border-pink-500/10">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Total Score</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                        Total Score
+                      </span>
                       <span className="text-2xl font-bold text-slate-900 dark:text-white">
                         {scores.correctness + scores.efficiency + scores.style}
-                        <span className="text-sm text-slate-500 dark:text-slate-500">/30</span>
+                        <span className="text-sm text-slate-500 dark:text-slate-500">
+                          /30
+                        </span>
                       </span>
                     </div>
                   </div>
@@ -421,9 +518,12 @@ export default function InstructorEvaluation({
               </PanelResizeHandle>
 
               {/* FEEDBACK + COMMENTS TABS */}
-              <Panel defaultSize={40} minSize={20} className="flex flex-col pt-2 relative">
+              <Panel
+                defaultSize={40}
+                minSize={20}
+                className="flex flex-col pt-2 relative"
+              >
                 <div className="h-full flex flex-col rounded-xl border border-emerald-500/30 bg-emerald-900/5 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-
                   {/* Tab bar */}
                   <div className="flex border-b border-emerald-500/20 bg-emerald-900/20 flex-shrink-0">
                     <button
@@ -468,11 +568,19 @@ export default function InstructorEvaluation({
                           className={`w-full py-2.5 font-bold rounded-lg shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all bg-emerald-500 hover:bg-emerald-400 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                           {loading ? (
-                            <img src={logo} alt="Loading" className="animate-float h-5 w-5 object-contain" />
+                            <img
+                              src={logo}
+                              alt="Loading"
+                              className="animate-float h-5 w-5 object-contain"
+                            />
                           ) : (
                             <Save size={16} />
                           )}
-                          {loading ? "Saving..." : submission ? "Submit Evaluation" : "Save Manual Evaluation"}
+                          {loading
+                            ? "Saving..."
+                            : submission
+                              ? "Submit Evaluation"
+                              : "Save Manual Evaluation"}
                         </button>
                       </div>
                     </>
@@ -486,13 +594,10 @@ export default function InstructorEvaluation({
                       code={code}
                     />
                   )}
-
                 </div>
               </Panel>
-
             </PanelGroup>
           </Panel>
-
         </PanelGroup>
       </div>
     </div>

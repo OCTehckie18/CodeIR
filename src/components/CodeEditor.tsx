@@ -15,7 +15,11 @@ import {
   PenLine,
 } from "lucide-react";
 
-import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels";
+import {
+  Panel,
+  Group as PanelGroup,
+  Separator as PanelResizeHandle,
+} from "react-resizable-panels";
 import logo from "../assets/no-bg-white-logo.png";
 import NavBar from "./NavBar";
 
@@ -27,8 +31,12 @@ interface CodeEditorProps {
 
 export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
   // State Management
-  const [code, setCode] = useState(problem?.boilerplate_code || "// Write your source code here...");
-  const [description, setDescription] = useState(problem?.problem_statement || "");
+  const [code, setCode] = useState(
+    problem?.boilerplate_code || "// Write your source code here...",
+  );
+  const [description, setDescription] = useState(
+    problem?.problem_statement || "",
+  );
   const [language, setLanguage] = useState("javascript");
   const [loading, setLoading] = useState(false);
   const [aiHints, setAiHints] = useState<string[]>([
@@ -42,17 +50,22 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
     "// Translated code will appear here",
   );
   const [user, setUser] = useState<any>(null);
-  const [validationStatus, setValidationStatus] = useState<"pending" | "valid" | "invalid">("pending");
+  const [validationStatus, setValidationStatus] = useState<
+    "pending" | "valid" | "invalid"
+  >("pending");
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
-  const [draftSubmissionId, setDraftSubmissionId] = useState<string | null>(null);
+  const [draftSubmissionId, setDraftSubmissionId] = useState<string | null>(
+    null,
+  );
   const [draftSaving, setDraftSaving] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
 
   const [copiedIr, setCopiedIr] = useState(false);
 
   const handleCopyIr = () => {
-    if (validationStatus !== "valid") return alert("Generate valid IR before copying.");
+    if (validationStatus !== "valid")
+      return alert("Generate valid IR before copying.");
     navigator.clipboard.writeText(irOutput);
     setCopiedIr(true);
     setTimeout(() => setCopiedIr(false), 2000);
@@ -67,7 +80,9 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
     setDraftSaving(true);
     setDraftSaved(false);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const headers = { Authorization: `Bearer ${session?.access_token}` };
 
       if (draftSubmissionId) {
@@ -75,7 +90,7 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
         await axios.put(
           `http://127.0.0.1:5000/api/submissions/${draftSubmissionId}`,
           { code, description, language },
-          { headers }
+          { headers },
         );
       } else {
         // CREATE a new draft submission — reuse the POST endpoint but with a "draft" status
@@ -93,7 +108,7 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
             translatedCode: "[Draft — not yet validated]",
             validationStatus: "draft",
           },
-          { headers }
+          { headers },
         );
         if (response.data.submissionId) {
           setDraftSubmissionId(response.data.submissionId);
@@ -103,10 +118,16 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
         }
       }
       setDraftSaved(true);
-      setAiHints((prev) => ["Draft saved! Come back anytime to continue.", ...prev]);
+      setAiHints((prev) => [
+        "Draft saved! Come back anytime to continue.",
+        ...prev,
+      ]);
       setTimeout(() => setDraftSaved(false), 3000);
     } catch (error: any) {
-      alert("Failed to save draft: " + (error.response?.data?.error || error.message));
+      alert(
+        "Failed to save draft: " +
+          (error.response?.data?.error || error.message),
+      );
     } finally {
       setDraftSaving(false);
     }
@@ -127,50 +148,68 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
   const handleSubmit = async () => {
     console.log("Submit pressed");
     if (!user) return alert("Please login first");
-    if (!description.trim()) return alert("Please provide a problem description so we can track it.");
+    if (!description.trim())
+      return alert("Please provide a problem description so we can track it.");
     if (!code.trim() || code.includes("Write your source code here")) {
       return alert("Please enter some actionable source code.");
     }
     if (validationStatus !== "valid") {
-      return alert("You must successfully validate your code and generate Pseudocode before saving.");
+      return alert(
+        "You must successfully validate your code and generate Pseudocode before saving.",
+      );
     }
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       const payload = {
         userId: user.id,
-        description,                         // ← was missing — backend requires this
+        description, // ← was missing — backend requires this
         problemId: problem?.problem_id || null,
         code,
         language,
         irOutput,
         translatedCode,
-        validationStatus
+        validationStatus,
       };
 
-      const response = await axios.post("http://127.0.0.1:5000/api/submissions", payload, {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`
-        }
-      });
+      const response = await axios.post(
+        "http://127.0.0.1:5000/api/submissions",
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+        },
+      );
 
       if (response.data.success) {
         setSubmissionSuccess(true);
-        setAiHints((prev) => [...prev, "Submission successful! Saved securely via backend."]);
+        setAiHints((prev) => [
+          ...prev,
+          "Submission successful! Saved securely via backend.",
+        ]);
       } else {
         throw new Error(response.data.error || "Unknown submission error.");
       }
     } catch (error: any) {
-      alert(`Error submitting: ${error.response?.data?.error || error.message}`);
+      alert(
+        `Error submitting: ${error.response?.data?.error || error.message}`,
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleValidate = async () => {
-    if (!description.trim() || !code.trim() || code.includes("Write your source code here")) {
+    if (
+      !description.trim() ||
+      !code.trim() ||
+      code.includes("Write your source code here")
+    ) {
       alert("Please provide both a valid problem description and code.");
       return;
     }
@@ -184,13 +223,23 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
 
     try {
       const engine = localStorage.getItem("aiEngine") || "ollama";
-      const response = await axios.post("http://127.0.0.1:5000/api/evaluate-code", {
-        code,
-        description,
-        engine
-      });
+      const response = await axios.post(
+        "http://127.0.0.1:5000/api/evaluate-code",
+        {
+          code,
+          description,
+          engine,
+        },
+      );
 
-      const { success, status, feedback, irOutput: apiIrOutput, translatedCode: apiTranslatedCode, error } = response.data;
+      const {
+        success,
+        status,
+        feedback,
+        irOutput: apiIrOutput,
+        translatedCode: apiTranslatedCode,
+        error,
+      } = response.data;
 
       if (!success) {
         throw new Error(error || "Unknown validation error");
@@ -199,17 +248,30 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
       if (status === "valid" && feedback === "CORRECT") {
         setIrOutput(apiIrOutput);
         setTranslatedCode(apiTranslatedCode);
-        setAiHints(["Validation complete. Code is correct. You can now save your submission."]);
+        setAiHints([
+          "Validation complete. Code is correct. You can now save your submission.",
+        ]);
         setValidationStatus("valid");
       } else {
-        setIrOutput("Validation failed. Please fix the code based on the feedback.");
-        setTranslatedCode("Validation failed. Please fix the code based on the feedback.");
-        setAiHints(["Validation Failed", feedback, "Please fix your code and try validating again."]);
+        setIrOutput(
+          "Validation failed. Please fix the code based on the feedback.",
+        );
+        setTranslatedCode(
+          "Validation failed. Please fix the code based on the feedback.",
+        );
+        setAiHints([
+          "Validation Failed",
+          feedback,
+          "Please fix your code and try validating again.",
+        ]);
         setValidationStatus("invalid");
       }
     } catch (error: any) {
       console.error(error);
-      setAiHints(["Error communicating with backend validation server.", error.message]);
+      setAiHints([
+        "Error communicating with backend validation server.",
+        error.message,
+      ]);
       setIrOutput("Error connecting to backend API.");
       setTranslatedCode("Error connecting to backend API.");
     } finally {
@@ -220,17 +282,29 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
   return (
     <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden">
       {/* SHARED NAV BAR */}
-      <NavBar role="student" active="editor" onNavigate={onNavigate!} email={user?.email} />
+      <NavBar
+        role="student"
+        active="editor"
+        onNavigate={onNavigate!}
+        email={user?.email}
+      />
 
       {/* ================= MAIN GRID LAYOUT (LeetCode Style with Draggable Resizer) ================= */}
       <div className="flex-1 p-4 overflow-hidden min-h-0 flex">
         <PanelGroup orientation="horizontal">
-          
           {/* ================= LEFT COLUMN: PROBLEM & HINTS ================= */}
-          <Panel defaultSize={40} minSize={20} className="flex flex-col h-full min-h-0">
+          <Panel
+            defaultSize={40}
+            minSize={20}
+            className="flex flex-col h-full min-h-0"
+          >
             <PanelGroup orientation="vertical">
               {/* Problem Statement Box */}
-              <Panel defaultSize={60} minSize={20} className="flex flex-col pb-2">
+              <Panel
+                defaultSize={60}
+                minSize={20}
+                className="flex flex-col pb-2"
+              >
                 <div className="h-full rounded-xl border border-sky-400/30 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm flex flex-col shadow-[0_0_20px_rgba(56,189,248,0.1)]">
                   <div className="px-4 py-3 bg-sky-900/20 border-b border-sky-500/20 flex flex-col">
                     <span className="text-sm font-semibold text-sky-400">
@@ -252,7 +326,11 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
               </PanelResizeHandle>
 
               {/* AI Hints Box */}
-              <Panel defaultSize={40} minSize={20} className="flex flex-col pt-2">
+              <Panel
+                defaultSize={40}
+                minSize={20}
+                className="flex flex-col pt-2"
+              >
                 <div className="h-full rounded-xl border border-pink-500/30 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-[0_0_20px_rgba(236,72,153,0.1)] flex flex-col">
                   <div className="px-4 py-2.5 bg-pink-900/20 border-b border-pink-500/20 flex items-center gap-2">
                     <Brain size={16} className="text-pink-400" />
@@ -284,15 +362,25 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
           </PanelResizeHandle>
 
           {/* ================= RIGHT COLUMN: EDITOR & CONSOLE ================= */}
-          <Panel defaultSize={60} minSize={30} className="flex flex-col h-full min-h-0 flex-1">
+          <Panel
+            defaultSize={60}
+            minSize={30}
+            className="flex flex-col h-full min-h-0 flex-1"
+          >
             <PanelGroup orientation="vertical">
               {/* Editor Box */}
-              <Panel defaultSize={65} minSize={20} className="flex flex-col pb-2 relative">
+              <Panel
+                defaultSize={65}
+                minSize={20}
+                className="flex flex-col pb-2 relative"
+              >
                 <div className="h-full relative flex flex-col rounded-xl border border-blue-500/30 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-[0_0_30px_rgba(59,130,246,0.1)]">
                   <div className="flex justify-between items-center px-4 py-2.5 bg-blue-900/20 border-b border-blue-500/20">
                     <div className="flex items-center gap-3">
                       <CodeIcon size={16} className="text-blue-400" />
-                      <span className="text-sm font-semibold text-blue-300">Code</span>
+                      <span className="text-sm font-semibold text-blue-300">
+                        Code
+                      </span>
                       <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
                       <select
                         className="bg-slate-50 dark:bg-slate-950 text-xs text-blue-200 border border-blue-500/30 rounded px-3 py-1.5 outline-none hover:bg-slate-900 transition-colors cursor-pointer"
@@ -327,17 +415,29 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
                         id="save-draft-btn"
                         onClick={handleSaveDraft}
                         disabled={draftSaving}
-                        title={draftSubmissionId ? "Update your saved draft" : "Save as draft without validating"}
+                        title={
+                          draftSubmissionId
+                            ? "Update your saved draft"
+                            : "Save as draft without validating"
+                        }
                         className={`px-3 py-1.5 text-xs font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-2 focus:outline-none ${
                           draftSaved
                             ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
                             : draftSaving
-                            ? "bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600"
-                            : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-400"
+                              ? "bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600"
+                              : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-400"
                         }`}
                       >
-                        {draftSaved ? <BookmarkCheck size={14} /> : <PenLine size={14} />}
-                        {draftSaving ? "SAVING..." : draftSaved ? "SAVED!" : "SAVE DRAFT"}
+                        {draftSaved ? (
+                          <BookmarkCheck size={14} />
+                        ) : (
+                          <PenLine size={14} />
+                        )}
+                        {draftSaving
+                          ? "SAVING..."
+                          : draftSaved
+                            ? "SAVED!"
+                            : "SAVE DRAFT"}
                       </button>
 
                       {/* Run Validation Button */}
@@ -345,12 +445,21 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
                         id="run-validation-btn"
                         onClick={handleValidate}
                         disabled={isEvaluating}
-                        className={`px-4 py-1.5 text-xs font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-2 focus:outline-none ${isEvaluating
-                          ? "bg-slate-600 text-slate-700 dark:text-slate-300 cursor-not-allowed"
-                          : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 hover:border-emerald-400"
-                          }`}
+                        className={`px-4 py-1.5 text-xs font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-2 focus:outline-none ${
+                          isEvaluating
+                            ? "bg-slate-600 text-slate-700 dark:text-slate-300 cursor-not-allowed"
+                            : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 hover:border-emerald-400"
+                        }`}
                       >
-                        {isEvaluating ? <img src={logo} alt="Loading" className="animate-float w-4 h-4 object-contain" /> : <CheckCircle2 size={14} />}
+                        {isEvaluating ? (
+                          <img
+                            src={logo}
+                            alt="Loading"
+                            className="animate-float w-4 h-4 object-contain"
+                          />
+                        ) : (
+                          <CheckCircle2 size={14} />
+                        )}
                         {isEvaluating ? "EVALUATING..." : "RUN VALIDATION"}
                       </button>
                     </div>
@@ -369,7 +478,8 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
                         scrollBeyondLastLine: false,
                         automaticLayout: true,
                         padding: { top: 16 },
-                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                        fontFamily:
+                          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
                         lineHeight: 24,
                       }}
                     />
@@ -383,7 +493,11 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
               </PanelResizeHandle>
 
               {/* Console / Outputs / Submission Box */}
-              <Panel defaultSize={35} minSize={20} className="flex flex-col pt-2 min-h-[0px]">
+              <Panel
+                defaultSize={35}
+                minSize={20}
+                className="flex flex-col pt-2 min-h-[0px]"
+              >
                 <div className="h-full flex flex-col rounded-xl border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-lg">
                   <div className="px-4 py-3 bg-slate-100/80 dark:bg-slate-800/80 border-b border-slate-300 dark:border-slate-700 flex justify-between items-center">
                     <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
@@ -391,47 +505,92 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
                     </span>
                     <div className="flex gap-3 items-center">
                       {/* Status indicator */}
-                      {validationStatus === 'valid' && <span className="text-xs text-emerald-400 font-bold tracking-widest px-2 bg-emerald-500/10 py-1 rounded border border-emerald-500/20 flex-shrink-0">VALIDATED</span>}
-                      {validationStatus === 'invalid' && <span className="text-xs text-rose-400 font-bold tracking-widest px-2 bg-rose-500/10 py-1 rounded border border-rose-500/20 flex-shrink-0">FAILED</span>}
-                      
+                      {validationStatus === "valid" && (
+                        <span className="text-xs text-emerald-400 font-bold tracking-widest px-2 bg-emerald-500/10 py-1 rounded border border-emerald-500/20 flex-shrink-0">
+                          VALIDATED
+                        </span>
+                      )}
+                      {validationStatus === "invalid" && (
+                        <span className="text-xs text-rose-400 font-bold tracking-widest px-2 bg-rose-500/10 py-1 rounded border border-rose-500/20 flex-shrink-0">
+                          FAILED
+                        </span>
+                      )}
+
                       <button
-                          id="submit-solution-btn"
-                          onClick={() => handleSubmit()}
-                          disabled={loading || validationStatus !== "valid" || submissionSuccess}
-                          className={`px-3 py-1 lg:px-5 lg:py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow flex items-center gap-2 transition-all whitespace-nowrap
-                            ${loading || validationStatus !== "valid" || submissionSuccess
-                              ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700"
-                              : "bg-emerald-500 hover:bg-emerald-400 text-slate-950 hover:-translate-y-0.5"
+                        id="submit-solution-btn"
+                        onClick={() => handleSubmit()}
+                        disabled={
+                          loading ||
+                          validationStatus !== "valid" ||
+                          submissionSuccess
+                        }
+                        className={`px-3 py-1 lg:px-5 lg:py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow flex items-center gap-2 transition-all whitespace-nowrap
+                            ${
+                              loading ||
+                              validationStatus !== "valid" ||
+                              submissionSuccess
+                                ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700"
+                                : "bg-emerald-500 hover:bg-emerald-400 text-slate-950 hover:-translate-y-0.5"
                             }
                           `}
-                        >
-                          {loading ? (
-                            <img src={logo} alt="Loading" className="animate-float w-4 h-4 object-contain" />
-                          ) : (
-                            <Save size={14} />
-                          )}
-                          <span className="hidden sm:inline">{submissionSuccess ? "Saved Successfully" : "Submit Solution"}</span>
-                          <span className="sm:hidden">{submissionSuccess ? "Saved" : "Submit"}</span>
-                        </button>
+                      >
+                        {loading ? (
+                          <img
+                            src={logo}
+                            alt="Loading"
+                            className="animate-float w-4 h-4 object-contain"
+                          />
+                        ) : (
+                          <Save size={14} />
+                        )}
+                        <span className="hidden sm:inline">
+                          {submissionSuccess
+                            ? "Saved Successfully"
+                            : "Submit Solution"}
+                        </span>
+                        <span className="sm:hidden">
+                          {submissionSuccess ? "Saved" : "Submit"}
+                        </span>
+                      </button>
                     </div>
                   </div>
-                  
+
                   {submissionSuccess ? (
                     <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-emerald-900/40 to-[#1e1e1e] overflow-hidden p-4 text-center">
-                      <CheckCircle2 size={48} className="text-emerald-400 mb-3" />
-                      <h3 className="text-xl font-bold text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">Accepted</h3>
-                      <p className="text-sm text-emerald-200/80 mt-2 font-medium">Your solution was validated and safely stored.</p>
+                      <CheckCircle2
+                        size={48}
+                        className="text-emerald-400 mb-3"
+                      />
+                      <h3 className="text-xl font-bold text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">
+                        Accepted
+                      </h3>
+                      <p className="text-sm text-emerald-200/80 mt-2 font-medium">
+                        Your solution was validated and safely stored.
+                      </p>
                     </div>
                   ) : (
                     <div className="flex-1 flex min-h-0 bg-[#1e1e1e]">
                       <PanelGroup orientation="horizontal">
                         {/* Left side of console: IR */}
-                        <Panel defaultSize={50} minSize={20} className="border-r border-slate-300 dark:border-slate-800 flex flex-col group relative">
+                        <Panel
+                          defaultSize={50}
+                          minSize={20}
+                          className="border-r border-slate-300 dark:border-slate-800 flex flex-col group relative"
+                        >
                           <div className="px-4 py-2 bg-[#252526] border-b border-slate-300 dark:border-slate-800 flex justify-between items-center text-xs sticky top-0 z-10">
-                              <span className="text-yellow-400/90 font-mono tracking-wider flex items-center gap-2 whitespace-nowrap"><FileJson size={14}/> Struct IR</span>
-                              <button onClick={handleCopyIr} className="text-slate-500 dark:text-slate-500 hover:text-slate-300 transition-colors p-1 hover:bg-white/5 rounded">
-                                {copiedIr ? <Check size={14} className="text-emerald-400"/> : <Copy size={14} />}
-                              </button>
+                            <span className="text-yellow-400/90 font-mono tracking-wider flex items-center gap-2 whitespace-nowrap">
+                              <FileJson size={14} /> Struct IR
+                            </span>
+                            <button
+                              onClick={handleCopyIr}
+                              className="text-slate-500 dark:text-slate-500 hover:text-slate-300 transition-colors p-1 hover:bg-white/5 rounded"
+                            >
+                              {copiedIr ? (
+                                <Check size={14} className="text-emerald-400" />
+                              ) : (
+                                <Copy size={14} />
+                              )}
+                            </button>
                           </div>
                           <pre className="flex-1 p-4 text-[12px] leading-relaxed text-yellow-100/70 font-mono overflow-auto custom-scrollbar bg-[#1e1e1e]">
                             {irOutput}
@@ -444,9 +603,15 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
                         </PanelResizeHandle>
 
                         {/* Right side of console: Translated Target */}
-                        <Panel defaultSize={50} minSize={20} className="flex flex-col bg-[#1e1e1e]">
+                        <Panel
+                          defaultSize={50}
+                          minSize={20}
+                          className="flex flex-col bg-[#1e1e1e]"
+                        >
                           <div className="px-4 py-2 bg-[#252526] border-b border-slate-300 dark:border-slate-800 flex items-center text-xs sticky top-0 z-10">
-                              <span className="text-purple-400/90 font-mono tracking-wider flex items-center gap-2 whitespace-nowrap"><Languages size={14}/> Target Code</span>
+                            <span className="text-purple-400/90 font-mono tracking-wider flex items-center gap-2 whitespace-nowrap">
+                              <Languages size={14} /> Target Code
+                            </span>
                           </div>
                           <pre className="flex-1 p-4 text-[12px] leading-relaxed text-purple-100/70 font-mono overflow-auto custom-scrollbar">
                             {translatedCode}
