@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
+import { Toaster } from "react-hot-toast";
 import { supabase } from "./lib/supabaseClient";
 import AuthForm from "./components/AuthForm";
-import CodeEditor from "./components/CodeEditor";
+import CodeEditor, { type DraftResume } from "./components/CodeEditor";
 import InstructorEvaluation from "./components/InstructorEvaluation"; // Updated Import
 import InstructorDashboard from "./components/InstructorDashboard"; // New Import
 import StudentDashboard from "./components/StudentDashboard";
 import ProblemList from "./components/ProblemList"; // New Import
 import PageLoader from "./components/PageLoader";
+import FloatingChat from "./components/FloatingChat";
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -17,7 +19,8 @@ function App() {
   const [studentView, setStudentView] = useState<
     "editor" | "dashboard" | "problems"
   >("dashboard");
-  const [selectedProblem, setSelectedProblem] = useState<any>(null); // To pass problem to editor
+  const [selectedProblem, setSelectedProblem] = useState<any>(null);
+  const [resumeDraft, setResumeDraft] = useState<DraftResume | null>(null);
 
   // INSTRUCTOR STATES
   const [instructorView, setInstructorView] = useState<
@@ -64,50 +67,90 @@ function App() {
 
   if (!session) return <AuthForm />;
 
-  // === INSTRUCTOR ROUTING ===
-  if (role === "instructor") {
-    if (instructorView === "dashboard") {
-      return (
-        <InstructorDashboard
-          onNavigate={(view, subId) => {
-            setInstructorView(view);
-            setSelectedSubmissionId(subId);
-          }}
-        />
-      );
-    } else if (instructorView === "evaluation") {
-      return (
-        <InstructorEvaluation
-          submissionId={selectedSubmissionId}
-          onNavigate={(view) => {
-            setInstructorView(view);
-            if (view !== "evaluation") setSelectedSubmissionId(undefined);
-          }}
-        />
-      );
-    } else if (instructorView === "problems") {
-      return <ProblemList role="instructor" onNavigate={setInstructorView} />;
+  const renderAppContent = () => {
+    // === INSTRUCTOR ROUTING ===
+    if (role === "instructor") {
+      if (instructorView === "dashboard") {
+        return (
+          <InstructorDashboard
+            onNavigate={(view, subId) => {
+              setInstructorView(view);
+              setSelectedSubmissionId(subId);
+            }}
+          />
+        );
+      } else if (instructorView === "evaluation") {
+        return (
+          <InstructorEvaluation
+            submissionId={selectedSubmissionId}
+            onNavigate={(view) => {
+              setInstructorView(view);
+              if (view !== "evaluation") setSelectedSubmissionId(undefined);
+            }}
+          />
+        );
+      } else if (instructorView === "problems") {
+        return <ProblemList role="instructor" onNavigate={setInstructorView} />;
+      }
     }
-  }
 
-  // === STUDENT ROUTING ===
-  return (
-    <div>
-      {studentView === "dashboard" ? (
-        <StudentDashboard onNavigate={setStudentView} />
-      ) : studentView === "problems" ? (
-        <ProblemList
-          role="student"
-          onNavigate={setStudentView}
-          onSelectProblem={(problem) => {
-            setSelectedProblem(problem);
-            setStudentView("editor");
+    // === STUDENT ROUTING ===
+    return (
+      <div>
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: "#1e293b",
+              color: "#f1f5f9",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "12px",
+              fontSize: "13px",
+            },
+            success: { iconTheme: { primary: "#34d399", secondary: "#1e293b" } },
+            error: { iconTheme: { primary: "#f87171", secondary: "#1e293b" } },
           }}
         />
-      ) : (
-        <CodeEditor onNavigate={setStudentView} problem={selectedProblem} />
-      )}
-    </div>
+        {studentView === "dashboard" ? (
+          <StudentDashboard
+            onNavigate={(view, draft?: DraftResume | null) => {
+              setResumeDraft(draft ?? null);
+              setSelectedProblem(null);
+              setStudentView(view);
+            }}
+          />
+        ) : studentView === "problems" ? (
+          <ProblemList
+            role="student"
+            onNavigate={(view) => {
+              setResumeDraft(null);
+              setStudentView(view);
+            }}
+            onSelectProblem={(problem) => {
+              setSelectedProblem(problem);
+              setResumeDraft(null);
+              setStudentView("editor");
+            }}
+          />
+        ) : (
+          <CodeEditor
+            onNavigate={(view) => {
+              setResumeDraft(null);
+              setStudentView(view);
+            }}
+            problem={selectedProblem}
+            resumeDraft={resumeDraft}
+          />
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <>
+      {renderAppContent()}
+      <FloatingChat />
+    </>
   );
 }
 

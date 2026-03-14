@@ -71,6 +71,30 @@ app.get("/api/profiles/:userId", async (req, res) => {
     }
 });
 
+// GET /api/users  —  Return a list of all registered users (for chat directory)
+app.get("/api/users", async (req, res) => {
+    try {
+        const { data, error } = await supabase.auth.admin.listUsers();
+        if (error) throw error;
+
+        const users = data.users.map(u => {
+            const meta = u.user_metadata || {};
+            return {
+                id: u.id,
+                email: u.email,
+                name: meta.display_name || u.email?.split("@")[0] || "User",
+                role: meta.role || "student",
+                avatarColor: meta.avatar_url || (meta.role === "instructor" ? "bg-emerald-500" : "bg-blue-500"),
+            };
+        });
+
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        console.error("Users list GET Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // PUT /api/profiles/:userId  —  Update profile metadata
 app.put("/api/profiles/:userId", async (req, res) => {
     const { userId } = req.params;
@@ -478,6 +502,47 @@ app.get("/api/dashboard/:userId", async (req, res) => {
 
         res.status(200).json({ success: true, data });
     } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// DRAFT RESUME ENDPOINT
+// GET /api/drafts/:userId?problemId=<uuid>
+//   Returns the most recent draft submission for a user.
+//   If problemId is supplied, scopes the query to that problem.
+//   Used by CodeEditor on mount to seed draftSubmissionId so that
+//   subsequent "Save Draft" clicks hit PUT (update) instead of
+//   POST (create), preventing duplicate draft rows.
+// ─────────────────────────────────────────────────────────────────
+
+app.get("/api/drafts/:userId", async (req, res) => {
+    const { userId } = req.params;
+    const { problemId } = req.query;
+
+    try {
+        const authSupabase = createAuthClient(req);
+        let query = authSupabase
+            .from("submissions")
+            .select(`
+                submission_id, source_code, source_language, submission_timestamp,
+                problems ( problem_id, problem_statement )
+            `)
+            .eq("user_id", userId)
+            .eq("validation_status", "draft")
+            .order("submission_timestamp", { ascending: false })
+            .limit(1);
+
+        if (problemId) {
+            query = query.eq("problem_id", problemId);
+        }
+
+        const { data, error } = await query.maybeSingle();
+        if (error) throw error;
+
+        res.status(200).json({ success: true, draft: data || null });
+    } catch (error) {
+        console.error("Draft Fetch Error:", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });

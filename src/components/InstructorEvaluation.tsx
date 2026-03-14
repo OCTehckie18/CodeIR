@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
+import { handleApiError, showSuccess } from "../lib/errorHandler";
 import {
   Code as CodeIcon,
   FileJson,
@@ -138,12 +139,10 @@ export default function InstructorEvaluation({
             "Code evaluated successfully by Gemini.",
         );
       } else {
-        alert("Failed to auto-grade code: " + response.data.error);
+        handleApiError({ message: response.data.error }, "Auto-grading");
       }
     } catch (error: any) {
-      console.error(error);
-      const backendError = error.response?.data?.error || error.message;
-      alert("Error reaching auto-grade service: " + backendError);
+      handleApiError(error, "Auto-grading");
     } finally {
       setIsAutoGrading(false);
     }
@@ -249,18 +248,14 @@ export default function InstructorEvaluation({
         throw new Error(response.data.error || "Failed to save evaluation");
       }
 
-      alert(
+      showSuccess(
         submission
           ? "Evaluation saved successfully!"
           : "Offline Evaluation & Submission securely saved to database!",
       );
       onNavigate("dashboard");
     } catch (error: any) {
-      alert(
-        "Error saving evaluation: " +
-          (error.response?.data?.error || error.message),
-      );
-      console.error(error);
+      handleApiError(error, "Saving evaluation");
     } finally {
       setLoading(false);
     }

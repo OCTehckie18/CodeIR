@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
+import { handleApiError, showSuccess } from "../lib/errorHandler";
 import {
   Code as CodeIcon,
   Brain,
@@ -23,26 +24,45 @@ import {
 import logo from "../assets/no-bg-white-logo.png";
 import NavBar from "./NavBar";
 
+// Resume draft shape — mirrors what GET /api/drafts/:userId returns
+export interface DraftResume {
+  submission_id: string;
+  source_code: string;
+  source_language: string;
+  problems?: { problem_id: number; problem_statement: string };
+}
+
 // Define props interface
 interface CodeEditorProps {
   onNavigate?: (page: "dashboard" | "editor" | "problems") => void;
   problem?: any;
+  resumeDraft?: DraftResume | null; // pre-loaded draft handed down from App.tsx
 }
 
-export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
-  // State Management
+export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEditorProps) {
+  // State Management — seed from resumeDraft prop if present, then from problem, then defaults
   const [code, setCode] = useState(
-    problem?.boilerplate_code || "// Write your source code here...",
+    resumeDraft?.source_code ||
+    problem?.boilerplate_code ||
+    "// Write your source code here...",
   );
   const [description, setDescription] = useState(
-    problem?.problem_statement || "",
+    resumeDraft?.problems?.problem_statement ||
+    problem?.problem_statement ||
+    "",
   );
-  const [language, setLanguage] = useState("javascript");
+  const [language, setLanguage] = useState(
+    resumeDraft?.source_language || "javascript",
+  );
   const [loading, setLoading] = useState(false);
-  const [aiHints, setAiHints] = useState<string[]>([
-    "Write a function to optimize the IR...",
-    "Check for null pointers in your logic.",
-  ]);
+  const [aiHints, setAiHints] = useState<string[]>(
+    resumeDraft
+      ? ["Resuming your draft — pick up where you left off!"]
+      : [
+          "Write a function to optimize the IR...",
+          "Check for null pointers in your logic.",
+        ],
+  );
   const [irOutput, setIrOutput] = useState(
     "{\n  'block': 'entry',\n  'ops': []\n}",
   );
@@ -55,8 +75,9 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
   >("pending");
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  // Seed draftSubmissionId from resumeDraft prop immediately — prevents first save from creating duplicates
   const [draftSubmissionId, setDraftSubmissionId] = useState<string | null>(
-    null,
+    resumeDraft?.submission_id ?? null,
   );
   const [draftSaving, setDraftSaving] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
@@ -64,8 +85,10 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
   const [copiedIr, setCopiedIr] = useState(false);
 
   const handleCopyIr = () => {
-    if (validationStatus !== "valid")
-      return alert("Generate valid IR before copying.");
+    if (validationStatus !== "valid") {
+      handleApiError({ message: "Generate valid IR before copying." }, "Copy IR");
+      return;
+    }
     navigator.clipboard.writeText(irOutput);
     setCopiedIr(true);
     setTimeout(() => setCopiedIr(false), 2000);
@@ -73,9 +96,13 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
 
   // Save draft handler — no validation required; updates existing draft or creates new one
   const handleSaveDraft = async () => {
-    if (!user) return alert("Please login first.");
+    if (!user) {
+      handleApiError({ message: "Please login first." }, "Save draft");
+      return;
+    }
     if (!code.trim() || code.includes("Write your source code here")) {
-      return alert("Please write some code before saving a draft.");
+      handleApiError({ message: "Please write some code before saving a draft." }, "Save draft");
+      return;
     }
     setDraftSaving(true);
     setDraftSaved(false);
@@ -102,6 +129,7 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
           {
             userId: user.id,
             description: description || "Draft",
+            problemId: problem?.problem_id || resumeDraft?.problems?.problem_id || null,
             code,
             language,
             irOutput: "[Draft — not yet validated]",
@@ -110,11 +138,17 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
           },
           { headers },
         );
-        if (response.data.submissionId) {
-          setDraftSubmissionId(response.data.submissionId);
-        } else if (response.data.submission_id) {
-          // fallback in case backend key name differs
-          setDraftSubmissionId(response.data.submission_id);
+        // Capture the new draft ID; show a warning if backend key is missing
+        const newId = response.data.submissionId ?? response.data.submission_id ?? null;
+        if (newId) {
+          setDraftSubmissionId(newId);
+        } else {
+          // Key mismatch — draft saved but we can't track it; warn visibly
+          console.warn("[Save Draft] Backend response missing submissionId key:", response.data);
+          handleApiError(
+            { message: "Draft saved but couldn't be tracked. Subsequent saves may create duplicates." },
+            "Save draft"
+          );
         }
       }
       setDraftSaved(true);
@@ -124,39 +158,72 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
       ]);
       setTimeout(() => setDraftSaved(false), 3000);
     } catch (error: any) {
-      alert(
-        "Failed to save draft: " +
-          (error.response?.data?.error || error.message),
-      );
+      handleApiError(error, "Saving draft");
     } finally {
       setDraftSaving(false);
     }
   };
 
-  // Fetch User on Mount
+  // Fetch User on Mount, then if no draft was injected via props,
+  // ask the backend for the user's latest draft (fixes state-loss-on-refresh).
   useEffect(() => {
-    const getUser = async () => {
+    const init = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      setUser(session?.user || null);
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+
+      // If a draft was already injected via the resumeDraft prop, skip the fetch.
+      if (resumeDraft || !currentUser) return;
+
+      try {
+        const problemId = problem?.problem_id;
+        const url = problemId
+          ? `http://127.0.0.1:5000/api/drafts/${currentUser.id}?problemId=${problemId}`
+          : `http://127.0.0.1:5000/api/drafts/${currentUser.id}`;
+
+        const res = await axios.get(url, {
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+        });
+
+        const draft = res.data?.draft;
+        if (draft) {
+          // Existing draft found — seed editor state so next save is a PUT, not a POST
+          setDraftSubmissionId(draft.submission_id);
+          setCode(draft.source_code || code);
+          setLanguage(draft.source_language || "javascript");
+          if (draft.problems?.problem_statement && !problem) {
+            setDescription(draft.problems.problem_statement);
+          }
+          setAiHints(["Existing draft restored — continue where you left off!"]);
+        }
+      } catch {
+        // Non-fatal: if draft fetch fails, editor starts fresh
+      }
     };
-    getUser();
+    init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle Code Submission
   const handleSubmit = async () => {
     console.log("Submit pressed");
-    if (!user) return alert("Please login first");
-    if (!description.trim())
-      return alert("Please provide a problem description so we can track it.");
+    if (!user) {
+      handleApiError({ message: "Please login first." }, "Submit");
+      return;
+    }
+    if (!description.trim()) {
+      handleApiError({ message: "Please provide a problem description so we can track it." }, "Submit");
+      return;
+    }
     if (!code.trim() || code.includes("Write your source code here")) {
-      return alert("Please enter some actionable source code.");
+      handleApiError({ message: "Please enter some actionable source code." }, "Submit");
+      return;
     }
     if (validationStatus !== "valid") {
-      return alert(
-        "You must successfully validate your code and generate Pseudocode before saving.",
-      );
+      handleApiError({ message: "You must successfully validate your code and generate Pseudocode before saving." }, "Submit");
+      return;
     }
     setLoading(true);
 
@@ -188,6 +255,7 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
 
       if (response.data.success) {
         setSubmissionSuccess(true);
+        showSuccess("Submission saved securely!");
         setAiHints((prev) => [
           ...prev,
           "Submission successful! Saved securely via backend.",
@@ -196,9 +264,7 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
         throw new Error(response.data.error || "Unknown submission error.");
       }
     } catch (error: any) {
-      alert(
-        `Error submitting: ${error.response?.data?.error || error.message}`,
-      );
+      handleApiError(error, "Submitting solution");
     } finally {
       setLoading(false);
     }
@@ -210,7 +276,7 @@ export default function CodeEditor({ onNavigate, problem }: CodeEditorProps) {
       !code.trim() ||
       code.includes("Write your source code here")
     ) {
-      alert("Please provide both a valid problem description and code.");
+      handleApiError({ message: "Please provide both a valid problem description and code." }, "Validate");
       return;
     }
 

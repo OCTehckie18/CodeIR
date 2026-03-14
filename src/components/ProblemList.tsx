@@ -3,6 +3,7 @@ import axios from "axios";
 import { supabase } from "../lib/supabaseClient";
 import NavBar from "./NavBar";
 import PageLoader from "./PageLoader";
+import { handleApiError } from "../lib/errorHandler";
 
 import {
   Plus,
@@ -77,9 +78,7 @@ export default function ProblemList({
         setProblems(response.data.data);
       }
     } catch (error: any) {
-      const msg =
-        error.response?.data?.error || error.message || "Unknown error";
-      console.error("Error fetching problems:", msg);
+      handleApiError(error, "Fetching problems");
     } finally {
       setLoading(false);
     }
@@ -116,10 +115,7 @@ export default function ProblemList({
       });
       fetchProblems();
     } catch (error: any) {
-      const msg =
-        error.response?.data?.error || error.message || "Unknown error";
-      console.error("Error saving problem:", msg);
-      alert(`Error saving problem: ${msg}`);
+      handleApiError(error, "Saving problem");
     }
   };
 
@@ -140,10 +136,7 @@ export default function ProblemList({
       await axios.delete(`http://127.0.0.1:5000/api/problems/${id}`);
       fetchProblems();
     } catch (error: any) {
-      const msg =
-        error.response?.data?.error || error.message || "Unknown error";
-      console.error("Error deleting problem:", msg);
-      alert(`Error deleting problem: ${msg}`);
+      handleApiError(error, "Deleting problem");
     }
   };
 

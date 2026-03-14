@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { supabase } from "../lib/supabaseClient";
+import { handleApiError, showSuccess } from "../lib/errorHandler";
 import {
   X,
   User,
@@ -109,14 +110,13 @@ export default function ProfileSettings({
           bio,
           theme_preference: themePreference,
         });
+        showSuccess("Profile saved successfully!");
         setTimeout(() => setSaved(false), 3000);
       } else {
-        alert("Failed to save: " + response.data.error);
+        handleApiError({ message: response.data.error }, "Saving profile");
       }
     } catch (err: any) {
-      alert(
-        "Error saving profile: " + (err.response?.data?.error || err.message),
-      );
+      handleApiError(err, "Saving profile");
     } finally {
       setSaving(false);
     }
@@ -124,7 +124,7 @@ export default function ProfileSettings({
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== "DELETE") {
-      alert("Please type DELETE to confirm account deletion.");
+      handleApiError({ message: "Please type DELETE to confirm account deletion." }, "Deleting account");
       return;
     }
 
@@ -142,13 +142,11 @@ export default function ProfileSettings({
         // Sign out — the auth state listener in App.tsx will redirect to AuthForm
         await supabase.auth.signOut();
       } else {
-        alert("Failed to delete account: " + response.data.error);
+        handleApiError({ message: response.data.error }, "Deleting account");
         setDeleting(false);
       }
     } catch (err: any) {
-      alert(
-        "Error deleting account: " + (err.response?.data?.error || err.message),
-      );
+      handleApiError(err, "Deleting account");
       setDeleting(false);
     }
   };

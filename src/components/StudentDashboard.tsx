@@ -4,6 +4,8 @@ import axios from "axios";
 import NavBar from "./NavBar";
 import PageLoader from "./PageLoader";
 import ProfileSettings from "./ProfileSettings";
+import { handleApiError, showSuccess } from "../lib/errorHandler";
+import { type DraftResume } from "./CodeEditor";
 
 import {
   User,
@@ -19,12 +21,13 @@ import {
   Plus,
   Check,
   X,
+  FileEdit,
 } from "lucide-react";
 
 export default function StudentDashboard({
   onNavigate,
 }: {
-  onNavigate: (page: "dashboard" | "editor" | "problems") => void;
+  onNavigate: (page: "dashboard" | "editor" | "problems", draft?: DraftResume | null) => void;
 }) {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -157,7 +160,7 @@ export default function StudentDashboard({
       calculateStats(safeSubs);
       processCalendarData(safeSubs);
     } catch (error) {
-      console.error("Error fetching dashboard:", error);
+      handleApiError(error, "Fetching dashboard");
     } finally {
       setLoading(false);
     }
@@ -316,14 +319,12 @@ export default function StudentDashboard({
         setSubmissions(updated);
         calculateStats(updated);
         processCalendarData(updated);
+        showSuccess("Submission deleted.");
       } else {
-        alert("Failed to delete submission: " + response.data.error);
+        handleApiError({ message: response.data.error }, "Deleting submission");
       }
     } catch (error: any) {
-      alert(
-        "Error deleting submission: " +
-          (error.response?.data?.error || error.message),
-      );
+      handleApiError(error, "Deleting submission");
     } finally {
       setDeletingId(null);
     }
@@ -794,8 +795,27 @@ export default function StudentDashboard({
                                 </span>
                               )}
                             </td>
-                            <td className="px-4 py-4 text-right rounded-r-xl">
-                              <StatusBadge status={sub.validation_status} />
+                            <td className="px-4 py-4 text-right">
+                              <div className="flex flex-col items-end gap-1">
+                                <StatusBadge status={sub.validation_status} />
+                                {sub.validation_status === "draft" && (
+                                  <button
+                                    onClick={() => {
+                                      const draftPayload: DraftResume = {
+                                        submission_id: sub.submission_id,
+                                        source_code: sub.source_code,
+                                        source_language: sub.source_language,
+                                        problems: sub.problems,
+                                      };
+                                      onNavigate("editor", draftPayload);
+                                    }}
+                                    title="Resume this draft in the editor"
+                                    className="flex items-center gap-1 text-[10px] font-bold text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 px-1.5 py-0.5 rounded transition-colors"
+                                  >
+                                    <FileEdit size={11} /> Resume
+                                  </button>
+                                )}
+                              </div>
                             </td>
                             <td className="px-2 py-4 text-right">
                               <button

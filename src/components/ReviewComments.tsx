@@ -1,6 +1,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import axios from "axios";
 import { supabase } from "../lib/supabaseClient";
+import { handleApiError } from "../lib/errorHandler";
 import {
   Plus,
   Trash2,
@@ -169,9 +170,7 @@ export default function ReviewComments({
         setShowForm(false);
       }
     } catch (err: any) {
-      alert(
-        "Failed to add comment: " + (err.response?.data?.error || err.message),
-      );
+      handleApiError(err, "Adding comment");
     } finally {
       setAdding(false);
     }
@@ -213,7 +212,7 @@ export default function ReviewComments({
         setEditingId(null);
       }
     } catch (err: any) {
-      alert("Failed to update: " + (err.response?.data?.error || err.message));
+      handleApiError(err, "Updating comment");
     } finally {
       setSaving(false);
     }
@@ -233,7 +232,7 @@ export default function ReviewComments({
       );
       setComments((prev) => prev.filter((c) => c.comment_id !== commentId));
     } catch (err: any) {
-      alert("Failed to delete: " + (err.response?.data?.error || err.message));
+      handleApiError(err, "Deleting comment");
     } finally {
       setDeletingId(null);
     }
