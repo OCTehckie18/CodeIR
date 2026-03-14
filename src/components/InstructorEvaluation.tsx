@@ -10,6 +10,11 @@ import {
   MessageSquare,
   Save,
   Sparkles,
+  Copy,
+  Check,
+  CheckCircle2,
+  Zap,
+  Palette,
 } from "lucide-react";
 
 import {
@@ -20,6 +25,7 @@ import {
 import logo from "../assets/no-bg-white-logo.png";
 import NavBar from "./NavBar";
 import ReviewComments from "./ReviewComments";
+import LoadingOverlay from "./LoadingOverlay";
 
 // 1. Define the Props Interface
 interface InstructorEvaluationProps {
@@ -54,6 +60,8 @@ export default function InstructorEvaluation({
   const [activeBottomTab, setActiveBottomTab] = useState<
     "feedback" | "comments"
   >("feedback");
+  const [currentEngine, setCurrentEngine] = useState<string>(localStorage.getItem("aiEngine") || "ollama");
+  const [copiedIr, setCopiedIr] = useState(false);
 
   // --- Fetch User & Specific Submission ---
   useEffect(() => {
@@ -122,6 +130,7 @@ export default function InstructorEvaluation({
         submission?.problems?.problem_statement ||
         "Instructor evaluating manual code via dashboard.";
       const engine = localStorage.getItem("aiEngine") || "ollama";
+      setCurrentEngine(engine);
       const payload = { code, description, engine };
       const response = await axios.post(
         "http://127.0.0.1:5000/api/auto-grade",
@@ -155,6 +164,7 @@ export default function InstructorEvaluation({
       const description =
         submission?.problems?.problem_statement || "Evaluate this code.";
       const engine = localStorage.getItem("aiEngine") || "ollama";
+      setCurrentEngine(engine);
       const payload = { code, description, engine };
       const response = await axios.post(
         "http://127.0.0.1:5000/api/evaluate-code",
@@ -187,6 +197,12 @@ export default function InstructorEvaluation({
     } finally {
       setIsValidating(false);
     }
+  };
+
+  const handleCopyIr = () => {
+    navigator.clipboard.writeText(irView);
+    setCopiedIr(true);
+    setTimeout(() => setCopiedIr(false), 2000);
   };
 
   const handleSubmitEvaluation = async () => {
@@ -270,6 +286,10 @@ export default function InstructorEvaluation({
         onNavigate={onNavigate}
         email={user?.email}
       />
+
+      <LoadingOverlay isVisible={isValidating} message="Validating Student Code..." />
+      <LoadingOverlay isVisible={isAutoGrading} message="AI Auto-Grading..." />
+      <LoadingOverlay isVisible={loading} message="Submitting Evaluation..." />
       {/* Manual Mode indicator shown below navbar when no submission ID */}
       {!submission && (
         <div className="flex items-center gap-2 px-6 py-1.5 bg-blue-500/10 border-b border-blue-500/20">
@@ -370,14 +390,43 @@ export default function InstructorEvaluation({
           >
             <div className="px-4 py-3 bg-yellow-900/20 border-b border-yellow-500/20 flex justify-between items-center">
               <span className="text-sm font-semibold text-yellow-300 flex items-center gap-2">
-                <FileJson size={16} /> Structured IR View
+                <FileJson size={16} /> Structured IR Viewer
               </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCopyIr}
+                  className="p-1.5 rounded-lg text-yellow-500/50 hover:text-yellow-400 hover:bg-yellow-500/10 transition-all"
+                  title="Copy IR"
+                >
+                  {copiedIr ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+                <div className="h-4 w-px bg-yellow-500/20 mx-1"></div>
+                <div className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${currentEngine === 'ollama' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'}`}>
+                  {currentEngine}
+                </div>
+              </div>
             </div>
-            <div className="flex-1 p-4 overflow-auto custom-scrollbar">
-              <textarea
-                className="w-full h-full bg-transparent resize-none focus:outline-none text-xs text-yellow-100/80 font-mono"
+            <div className="flex-1 pt-2">
+              <Editor
+                height="100%"
+                defaultLanguage="json"
+                theme="vs-dark"
                 value={irView}
-                onChange={(e) => setIrView(e.target.value)}
+                onChange={(val) => setIrView(val || "")}
+                options={{
+                  readOnly: false,
+                  minimap: { enabled: false },
+                  fontSize: 12,
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                  padding: { top: 16 },
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  lineNumbers: "on",
+                  glyphMargin: false,
+                  folding: true,
+                  lineDecorationsWidth: 0,
+                  lineNumbersMinChars: 3,
+                }}
               />
             </div>
           </Panel>
@@ -423,12 +472,16 @@ export default function InstructorEvaluation({
                     </button>
                   </div>
 
-                  <div className="p-5 flex-1 space-y-6 overflow-y-auto custom-scrollbar">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-pink-100">
-                        <span>Correctness</span>
-                        <span className="font-bold text-pink-400">
-                          {scores.correctness}/10
+                  <div className="p-5 flex-1 space-y-8 overflow-y-auto custom-scrollbar">
+                    {/* Correctness */}
+                    <div className="space-y-3 p-4 rounded-xl bg-pink-500/5 border border-pink-500/10 hover:border-pink-500/30 transition-all group/rubric">
+                      <div className="flex justify-between items-center text-xs text-pink-100">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 size={16} className="text-pink-400" />
+                          <span className="font-semibold tracking-wide">Correctness</span>
+                        </div>
+                        <span className="font-black text-lg text-pink-400">
+                          {scores.correctness}<span className="text-[10px] text-pink-500/50">/10</span>
                         </span>
                       </div>
                       <input
@@ -442,15 +495,22 @@ export default function InstructorEvaluation({
                             correctness: parseInt(e.target.value),
                           })
                         }
-                        className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
+                        className="premium-slider"
+                        style={{
+                           accentColor: scores.correctness > 7 ? '#10b981' : scores.correctness > 4 ? '#f59e0b' : '#ef4444'
+                        }}
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-pink-100">
-                        <span>IR Efficiency</span>
-                        <span className="font-bold text-pink-400">
-                          {scores.efficiency}/10
+                    {/* IR Efficiency */}
+                    <div className="space-y-3 p-4 rounded-xl bg-pink-500/5 border border-pink-500/10 hover:border-pink-500/30 transition-all group/rubric">
+                      <div className="flex justify-between items-center text-xs text-pink-100">
+                        <div className="flex items-center gap-2">
+                          <Zap size={16} className="text-pink-400" />
+                          <span className="font-semibold tracking-wide">IR Efficiency</span>
+                        </div>
+                        <span className="font-black text-lg text-pink-400">
+                          {scores.efficiency}<span className="text-[10px] text-pink-500/50">/10</span>
                         </span>
                       </div>
                       <input
@@ -464,15 +524,19 @@ export default function InstructorEvaluation({
                             efficiency: parseInt(e.target.value),
                           })
                         }
-                        className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
+                        className="premium-slider"
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-pink-100">
-                        <span>Code Style</span>
-                        <span className="font-bold text-pink-400">
-                          {scores.style}/10
+                    {/* Code Style */}
+                    <div className="space-y-3 p-4 rounded-xl bg-pink-500/5 border border-pink-500/10 hover:border-pink-500/30 transition-all group/rubric">
+                      <div className="flex justify-between items-center text-xs text-pink-100">
+                        <div className="flex items-center gap-2">
+                          <Palette size={16} className="text-pink-400" />
+                          <span className="font-semibold tracking-wide">Code Style</span>
+                        </div>
+                        <span className="font-black text-lg text-pink-400">
+                          {scores.style}<span className="text-[10px] text-pink-500/50">/10</span>
                         </span>
                       </div>
                       <input
@@ -486,22 +550,25 @@ export default function InstructorEvaluation({
                             style: parseInt(e.target.value),
                           })
                         }
-                        className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
+                        className="premium-slider"
                       />
                     </div>
                   </div>
 
-                  <div className="px-5 pb-4 pt-2 border-t border-pink-500/10">
+                  <div className="px-5 pb-6 pt-4 border-t border-pink-500/10 bg-pink-500/5">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        Total Score
-                      </span>
-                      <span className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {scores.correctness + scores.efficiency + scores.style}
-                        <span className="text-sm text-slate-500 dark:text-slate-500">
-                          /30
+                      <div className="flex flex-col">
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500">
+                          Composite Score
                         </span>
-                      </span>
+                        <span className="text-xs text-slate-400 font-medium">Weighted average</span>
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-pink-400 to-rose-600">
+                          {scores.correctness + scores.efficiency + scores.style}
+                        </span>
+                        <span className="text-sm font-bold text-slate-500">/30</span>
+                      </div>
                     </div>
                   </div>
                 </div>

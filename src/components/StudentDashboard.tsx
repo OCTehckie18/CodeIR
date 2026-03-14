@@ -42,31 +42,11 @@ export default function StudentDashboard({
   });
   const [calendarData, setCalendarData] = useState<any[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
 
-  // --- Manual Skills State ---
-  const [skills, setSkills] = useState(() => {
-    const saved = localStorage.getItem("student_skills");
-    return saved
-      ? JSON.parse(saved)
-      : [
-          {
-            name: "Problem Solver",
-            color: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-          },
-          {
-            name: "JS Enthusiast",
-            color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-          },
-          {
-            name: "Consistency",
-            color: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-          },
-          {
-            name: "Pythonista",
-            color: "bg-pink-500/10 text-pink-400 border-pink-500/20",
-          },
-        ];
-  });
+  // --- Skills State ---
+  const [skills, setSkills] = useState<any[]>([]);
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [newSkillName, setNewSkillName] = useState("");
 
@@ -83,24 +63,49 @@ export default function StudentDashboard({
     "bg-amber-500/10 text-amber-400 border-amber-500/20",
   ];
 
-  useEffect(() => {
-    localStorage.setItem("student_skills", JSON.stringify(skills));
-  }, [skills]);
 
-  const handleAddSkill = (e: React.FormEvent) => {
+
+  const handleAddSkill = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newSkillName.trim()) {
-      const randomColor =
-        skillColorPalette[Math.floor(Math.random() * skillColorPalette.length)];
-      setSkills([...skills, { name: newSkillName.trim(), color: randomColor }]);
-      setNewSkillName("");
-      setShowAddSkill(false);
+    if (newSkillName.trim() && user) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const randomColor =
+          skillColorPalette[Math.floor(Math.random() * skillColorPalette.length)];
+        const res = await axios.post(`http://127.0.0.1:5000/api/profiles/${user.id}/skills`, 
+          { name: newSkillName.trim(), color: randomColor },
+          { headers: { Authorization: `Bearer ${session?.access_token}` } }
+        );
+        if (res.data.success) {
+          setSkills([...skills, res.data.skill]);
+          setNewSkillName("");
+          setShowAddSkill(false);
+          showSuccess("Skill added.");
+        }
+      } catch (error) {
+        handleApiError(error, "Adding skill");
+      }
+    }
+  };
+
+  const handleDeleteSkill = async (skillId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await axios.delete(`http://127.0.0.1:5000/api/skills/${skillId}`,
+        { headers: { Authorization: `Bearer ${session?.access_token}` } }
+      );
+      if (res.data.success) {
+        setSkills(skills.filter(s => s.id !== skillId));
+        showSuccess("Skill removed.");
+      }
+    } catch (error) {
+      handleApiError(error, "Deleting skill");
     }
   };
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [page]);
 
   const fetchDashboardData = async () => {
     try {
@@ -111,20 +116,20 @@ export default function StudentDashboard({
       setUser(session.user);
 
       // allSettled: a profile failure NEVER blocks submissions from loading
-      const [profileResult, dashboardResult] = await Promise.allSettled([
+      const [profileResult, dashboardResult, skillsResult] = await Promise.allSettled([
         axios.get(`http://127.0.0.1:5000/api/profiles/${session.user.id}`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         }),
-        axios.get(`http://127.0.0.1:5000/api/dashboard/${session.user.id}`, {
+        axios.get(`http://127.0.0.1:5000/api/dashboard/${session.user.id}?limit=${pageSize}&offset=${page * pageSize}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }),
+        axios.get(`http://127.0.0.1:5000/api/profiles/${session.user.id}/skills`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         }),
       ]);
 
-      // ── Profile (best-effort: failure is non-fatal) ──
-      if (
-        profileResult.status === "fulfilled" &&
-        profileResult.value.data.success
-      ) {
+      // ── Profile (best-effort) ──
+      if (profileResult.status === "fulfilled" && profileResult.value.data.success) {
         const p = profileResult.value.data.profile;
         setProfile(p);
         const savedTheme = p.theme_preference || "dark";
@@ -135,24 +140,19 @@ export default function StudentDashboard({
           document.documentElement.classList.remove("dark");
           localStorage.setItem("theme", "light");
         }
-      } else if (profileResult.status === "rejected") {
-        console.warn(
-          "Profile fetch failed (non-fatal):",
-          profileResult.reason?.message,
-        );
       }
 
-      // ── Submissions (required) ──
+      // ── Skills (best-effort) ──
+      if (skillsResult.status === "fulfilled" && skillsResult.value.data.success) {
+        setSkills(skillsResult.value.data.skills || []);
+      }
+
+      // ── Submissions ──
       if (dashboardResult.status === "rejected") {
-        throw new Error(
-          "Failed to fetch submissions: " + dashboardResult.reason?.message,
-        );
+        throw new Error("Failed to fetch submissions: " + (dashboardResult.reason?.message || "Unknown error"));
       }
       if (!dashboardResult.value.data.success) {
-        throw new Error(
-          dashboardResult.value.data.error ||
-            "Failed to fetch student dashboard data",
-        );
+        throw new Error(dashboardResult.value.data.error || "Failed to fetch student dashboard data");
       }
 
       const safeSubs = dashboardResult.value.data.data || [];
@@ -482,13 +482,19 @@ export default function StudentDashboard({
                 </div>
 
                 <div className="flex flex-wrap gap-2.5">
-                  {skills.map((skill: any, idx: number) => (
-                    <span
-                      key={idx}
-                      className={`px-3 py-1 ${skill.color} text-xs font-medium rounded-full border shadow-sm`}
+                  {skills.map((skill: any) => (
+                    <div
+                      key={skill.id || skill.name}
+                      className={`group/skill relative flex items-center px-3 py-1 ${skill.color} text-xs font-medium rounded-full border shadow-sm`}
                     >
                       {skill.name}
-                    </span>
+                      <button
+                        onClick={() => handleDeleteSkill(skill.id)}
+                        className="ml-1.5 opacity-0 group-hover/skill:opacity-100 hover:text-white transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
                   ))}
 
                   {showAddSkill && (
@@ -845,6 +851,31 @@ export default function StudentDashboard({
                       )}
                     </tbody>
                   </table>
+                </div>
+                {/* Pagination Controls */}
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-white/5">
+                  <div className="text-xs text-slate-500 font-medium">
+                    Showing {submissions.length} submissions
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      disabled={page === 0}
+                      className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-xs font-bold disabled:opacity-30 hover:bg-white/10 transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs font-bold text-slate-400 px-2">
+                      Page {page + 1}
+                    </span>
+                    <button
+                      onClick={() => setPage((p) => p + 1)}
+                      disabled={submissions.length < pageSize}
+                      className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-xs font-bold disabled:opacity-30 hover:bg-white/10 transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

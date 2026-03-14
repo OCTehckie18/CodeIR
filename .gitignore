@@ -99,6 +99,15 @@ backend/*.log
 replace-theme.js
 
 # ===========================
+# Debug Scripts
+# ===========================
+backend/check_schema.js
+backend/debug_db.js
+backend/verify_dashboard.js
+tmp_debug_db.cjs
+tmp_debug_db.js
+
+# ===========================
 # Miscellaneous
 # ===========================
 *.pid

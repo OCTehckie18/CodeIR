@@ -12,8 +12,6 @@ import {
   CheckCircle2,
   Copy,
   Check,
-  BookmarkCheck,
-  PenLine,
 } from "lucide-react";
 
 import {
@@ -23,6 +21,7 @@ import {
 } from "react-resizable-panels";
 import logo from "../assets/no-bg-white-logo.png";
 import NavBar from "./NavBar";
+import LoadingOverlay from "./LoadingOverlay";
 
 // Resume draft shape — mirrors what GET /api/drafts/:userId returns
 export interface DraftResume {
@@ -75,13 +74,6 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
   >("pending");
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
-  // Seed draftSubmissionId from resumeDraft prop immediately — prevents first save from creating duplicates
-  const [draftSubmissionId, setDraftSubmissionId] = useState<string | null>(
-    resumeDraft?.submission_id ?? null,
-  );
-  const [draftSaving, setDraftSaving] = useState(false);
-  const [draftSaved, setDraftSaved] = useState(false);
-
   const [copiedIr, setCopiedIr] = useState(false);
 
   const handleCopyIr = () => {
@@ -94,75 +86,7 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
     setTimeout(() => setCopiedIr(false), 2000);
   };
 
-  // Save draft handler — no validation required; updates existing draft or creates new one
-  const handleSaveDraft = async () => {
-    if (!user) {
-      handleApiError({ message: "Please login first." }, "Save draft");
-      return;
-    }
-    if (!code.trim() || code.includes("Write your source code here")) {
-      handleApiError({ message: "Please write some code before saving a draft." }, "Save draft");
-      return;
-    }
-    setDraftSaving(true);
-    setDraftSaved(false);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const headers = { Authorization: `Bearer ${session?.access_token}` };
 
-      if (draftSubmissionId) {
-        // UPDATE existing draft via PUT
-        await axios.put(
-          `http://127.0.0.1:5000/api/submissions/${draftSubmissionId}`,
-          { code, description, language },
-          { headers },
-        );
-      } else {
-        // CREATE a new draft submission — reuse the POST endpoint but with a "draft" status
-        // We first need a problem record, so we POST a new submission with validation_status=draft
-        // and no IR/translations. We'll mark it as a draft via the PUT route pattern below:
-        // Actually: POST a new "draft" submission row using the existing POST route sending an empty irOutput.
-        const response = await axios.post(
-          "http://127.0.0.1:5000/api/submissions",
-          {
-            userId: user.id,
-            description: description || "Draft",
-            problemId: problem?.problem_id || resumeDraft?.problems?.problem_id || null,
-            code,
-            language,
-            irOutput: "[Draft — not yet validated]",
-            translatedCode: "[Draft — not yet validated]",
-            validationStatus: "draft",
-          },
-          { headers },
-        );
-        // Capture the new draft ID; show a warning if backend key is missing
-        const newId = response.data.submissionId ?? response.data.submission_id ?? null;
-        if (newId) {
-          setDraftSubmissionId(newId);
-        } else {
-          // Key mismatch — draft saved but we can't track it; warn visibly
-          console.warn("[Save Draft] Backend response missing submissionId key:", response.data);
-          handleApiError(
-            { message: "Draft saved but couldn't be tracked. Subsequent saves may create duplicates." },
-            "Save draft"
-          );
-        }
-      }
-      setDraftSaved(true);
-      setAiHints((prev) => [
-        "Draft saved! Come back anytime to continue.",
-        ...prev,
-      ]);
-      setTimeout(() => setDraftSaved(false), 3000);
-    } catch (error: any) {
-      handleApiError(error, "Saving draft");
-    } finally {
-      setDraftSaving(false);
-    }
-  };
 
   // Fetch User on Mount, then if no draft was injected via props,
   // ask the backend for the user's latest draft (fixes state-loss-on-refresh).
@@ -189,8 +113,7 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
 
         const draft = res.data?.draft;
         if (draft) {
-          // Existing draft found — seed editor state so next save is a PUT, not a POST
-          setDraftSubmissionId(draft.submission_id);
+          // Existing draft found — seed editor state
           setCode(draft.source_code || code);
           setLanguage(draft.source_language || "javascript");
           if (draft.problems?.problem_statement && !problem) {
@@ -355,6 +278,9 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
         email={user?.email}
       />
 
+      <LoadingOverlay isVisible={isEvaluating} message="Evaluating Code..." />
+      <LoadingOverlay isVisible={loading} message="Saving Submission..." />
+
       {/* ================= MAIN GRID LAYOUT (LeetCode Style with Draggable Resizer) ================= */}
       <div className="flex-1 p-4 overflow-hidden min-h-0 flex">
         <PanelGroup orientation="horizontal">
@@ -476,36 +402,6 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Save Draft Button */}
-                      <button
-                        id="save-draft-btn"
-                        onClick={handleSaveDraft}
-                        disabled={draftSaving}
-                        title={
-                          draftSubmissionId
-                            ? "Update your saved draft"
-                            : "Save as draft without validating"
-                        }
-                        className={`px-3 py-1.5 text-xs font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-2 focus:outline-none ${
-                          draftSaved
-                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                            : draftSaving
-                              ? "bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600"
-                              : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-400"
-                        }`}
-                      >
-                        {draftSaved ? (
-                          <BookmarkCheck size={14} />
-                        ) : (
-                          <PenLine size={14} />
-                        )}
-                        {draftSaving
-                          ? "SAVING..."
-                          : draftSaved
-                            ? "SAVED!"
-                            : "SAVE DRAFT"}
-                      </button>
-
                       {/* Run Validation Button */}
                       <button
                         id="run-validation-btn"
@@ -534,7 +430,18 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
                     <Editor
                       height="100%"
                       defaultLanguage="javascript"
-                      language={language}
+                      language={
+                        language === "python3" ? "python" :
+                        language === "cpp" ? "cpp" :
+                        language === "c" ? "cpp" :
+                        language === "csharp" ? "csharp" :
+                        language === "java" ? "java" :
+                        language === "go" ? "go" :
+                        language === "rust" ? "rust" :
+                        language === "typescript" ? "typescript" :
+                        language === "javascript" ? "javascript" :
+                        language // fallback
+                      }
                       theme="vs-dark"
                       value={code}
                       onChange={(val) => setCode(val || "")}

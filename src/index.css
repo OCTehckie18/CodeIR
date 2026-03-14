@@ -58,6 +58,61 @@
 }
 
 /* Optional base styles to make the full height work well */
+/* Premium Range Slider Styles */
+input[type="range"].premium-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+}
+
+input[type="range"].premium-slider::-webkit-slider-runnable-track {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  height: 0.5rem;
+}
+
+input[type="range"].premium-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -6px; /* Centers thumb on the track */
+  background-color: #ec4899; /* pink-500 */
+  border-radius: 9999px;
+  height: 1.25rem;
+  width: 1.25rem;
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.5);
+  transition: all 0.2s ease-in-out;
+}
+
+input[type="range"].premium-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(236, 72, 153, 0.7);
+}
+
+input[type="range"].premium-slider:active::-webkit-slider-thumb {
+  transform: scale(0.95);
+}
+
+/* Firefox Styles */
+input[type="range"].premium-slider::-moz-range-track {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  height: 0.5rem;
+}
+
+input[type="range"].premium-slider::-moz-range-thumb {
+  background-color: #ec4899;
+  border-radius: 9999px;
+  height: 1.25rem;
+  width: 1.25rem;
+  border: none;
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.5);
+  transition: all 0.2s ease-in-out;
+}
+
 @layer base {
   html,
   body,

@@ -11,7 +11,7 @@ import {
 // ─────────────────────────────────────────────────────────────
 // NavBar — shared top navigation bar used across every page.
 //
-// For STUDENTS:  Dashboard | Problem Bank | Sandbox
+// For STUDENTS:  Dashboard | Problem Bank | Editor
 // For INSTRUCTORS: Dashboard | Problem Bank | Evaluation
 //
 // Props:
@@ -85,7 +85,7 @@ export default function NavBar({
             onClick={() => onNavigate("editor")}
           >
             <CodeIcon size={20} />
-            <span>SANDBOX</span>
+            <span>EDITOR</span>
           </div>
         </nav>
 

@@ -26,67 +26,63 @@ export default function FloatingChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [chatHistories, setChatHistories] = useState<Record<string, Message[]>>({});
+  const [hasMore, setHasMore] = useState<Record<string, boolean>>({});
   const [newMessage, setNewMessage] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const currentUserIdRef = useRef<string | null>(null);
 
   const activeChat = conversations.find(c => c.id === activeChatId);
+  const activeMessages = activeChatId ? chatHistories[activeChatId] || [] : [];
 
-  // Fetch current user and conversations from Supabase
+  // Fetch current user and contacts list
   useEffect(() => {
     let unmounted = false;
+    let userId: string | null = null;
 
     const setupChat = async () => {
       try {
-        // 1. Get current user
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
         
-        const myId = session.user.id;
+        userId = session.user.id;
         const myRole = session.user.user_metadata?.role || "student";
-        if (!unmounted) setCurrentUserId(myId);
+        if (!unmounted) {
+          setCurrentUserId(userId);
+          currentUserIdRef.current = userId;
+        }
 
-        // 2. Fetch all users from backend API
         const usersResponse = await fetch('http://127.0.0.1:5000/api/users');
         const usersData = await usersResponse.json();
         const allUsers = usersData.success ? usersData.users : [];
 
-        // 3. Filter users based on role (students see instructors, instructors see students)
         const targetRole = myRole === "instructor" ? "student" : "instructor";
         const contacts = allUsers.filter((u: any) => u.role === targetRole);
 
-        // 4. Fetch messages from Supabase
-        const { data: msgsData } = await supabase
-          .from('messages')
-          .select('*')
-          .or(`sender_id.eq.${myId},receiver_id.eq.${myId}`)
-          .order('created_at', { ascending: true });
-
-        const messages = msgsData || [];
-
-        // 5. Build conversation array
+        // Optimization: Fetch only the LATEST message for each contact for the sidebar
+        const { data: latestMsgs } = await supabase.rpc('get_latest_messages', { user_uuid: userId });
+        
         const conversationList: Conversation[] = contacts.map((contact: any) => {
-          const convoMsgs = messages
-            .filter((m: any) => 
-              (m.sender_id === myId && m.receiver_id === contact.id) ||
-              (m.sender_id === contact.id && m.receiver_id === myId)
-            )
-            .map((m: any) => ({
-              id: m.id,
-              senderId: m.sender_id,
-              text: m.text,
-              timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }));
+          const lastMsgData = latestMsgs?.find((m: any) => m.contact_id === contact.id);
+          const lastMsg = lastMsgData ? [{
+            id: lastMsgData.id,
+            senderId: lastMsgData.sender_id,
+            text: lastMsgData.text,
+            timestamp: new Date(lastMsgData.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }] : [];
 
           return {
-            id: contact.id, // User ID acts as conversation ID in direct messages
+            id: contact.id,
             participant: {
               id: contact.id,
               name: contact.name,
               role: contact.role === "instructor" ? "Teacher" : "Student",
               avatarColor: contact.avatarColor || (contact.role === "instructor" ? "bg-emerald-500" : "bg-blue-500"),
             },
-            messages: convoMsgs
+            messages: lastMsg
           };
         });
 
@@ -98,12 +94,69 @@ export default function FloatingChat() {
 
     setupChat();
 
-    // 3. Optional: Set up real-time listener for incoming messages
     const channel = supabase
-      .channel('realtime:messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-        // Simple re-fetch on new message
-        setupChat();
+      .channel('chat-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
+        const newMsg = payload.new;
+        const actualUserId = currentUserIdRef.current;
+        
+        if (!actualUserId) return;
+
+        const mappedMsg: Message = {
+          id: newMsg.id,
+          senderId: newMsg.sender_id,
+          text: newMsg.text,
+          timestamp: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        const partnerId = newMsg.sender_id === actualUserId ? newMsg.receiver_id : newMsg.sender_id;
+
+        // 1. Update Sidebar
+        setConversations(prev => prev.map(conv => {
+          if (conv.id === partnerId) {
+            return { ...conv, messages: [mappedMsg] };
+          }
+          return conv;
+        }));
+
+        // 2. Update Histories with De-duplication and Optimistic Replacement
+        setChatHistories(prev => {
+          const history = prev[partnerId] || [];
+          
+          // 1. If we already have this exact message by ID, skip
+          if (history.some(m => m.id === mappedMsg.id)) return prev;
+
+          // 2. If it's from current user, try to replace the optimistic version
+          if (newMsg.sender_id === actualUserId) {
+            const optimisticIdx = history.findIndex(m => 
+              m.senderId === actualUserId && 
+              m.text === mappedMsg.text && 
+              m.id.includes('.') === false && m.id.length < 20 // Temporary IDs are shorter than UUIDs
+            );
+
+            if (optimisticIdx !== -1) {
+              const newHistory = [...history];
+              newHistory[optimisticIdx] = mappedMsg; // Replace with server version
+              return { ...prev, [partnerId]: newHistory };
+            }
+          }
+          
+          // 3. Otherwise add as new message
+          return { ...prev, [partnerId]: [...history, mappedMsg] };
+        });
+
+        // 3. Handle Notification Badge
+        if (newMsg.receiver_id === actualUserId) {
+          setIsOpen(isOpenNow => {
+            setActiveChatId(activeIdNow => {
+              if (!isOpenNow || activeIdNow !== newMsg.sender_id) {
+                setUnreadCount(count => count + 1);
+              }
+              return activeIdNow;
+            });
+            return isOpenNow;
+          });
+        }
       })
       .subscribe();
 
@@ -113,39 +166,128 @@ export default function FloatingChat() {
     };
   }, []);
 
+  // Lazy Load History when activeChatId changes
+  useEffect(() => {
+    if (!activeChatId || !currentUserId || chatHistories[activeChatId]) return;
+
+    const loadHistory = async () => {
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChatId}),and(sender_id.eq.${activeChatId},receiver_id.eq.${currentUserId})`)
+        .order('created_at', { ascending: false })
+        .limit(51); // Fetch one extra to check if there's more
+
+      if (data) {
+        const hasMoreData = data.length > 50;
+        const historyData = hasMoreData ? data.slice(0, 50) : data;
+        
+        const history = historyData.reverse().map((m: any) => ({
+          id: m.id,
+          senderId: m.sender_id,
+          text: m.text,
+          timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }));
+        
+        setChatHistories(prev => ({ ...prev, [activeChatId]: history }));
+        setHasMore(prev => ({ ...prev, [activeChatId]: hasMoreData }));
+      }
+    };
+
+    loadHistory();
+  }, [activeChatId, currentUserId]);
+
+  const loadMoreMessages = async () => {
+    if (!activeChatId || !currentUserId) return;
+    const history = chatHistories[activeChatId] || [];
+    if (history.length === 0) return;
+
+    // Use the earliest message timestamp to fetch older ones
+    // We need to fetch the full row from DB to get the actual created_at
+    const { data: firstMsgData } = await supabase
+      .from('messages')
+      .select('created_at')
+      .eq('id', history[0].id)
+      .single();
+
+    if (!firstMsgData) return;
+
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChatId}),and(sender_id.eq.${activeChatId},receiver_id.eq.${currentUserId})`)
+      .lt('created_at', firstMsgData.created_at)
+      .order('created_at', { ascending: false })
+      .limit(51);
+
+    if (data) {
+      const hasMoreData = data.length > 50;
+      const historyData = hasMoreData ? data.slice(0, 50) : data;
+      
+      const olderHistory = historyData.reverse().map((m: any) => ({
+        id: m.id,
+        senderId: m.sender_id,
+        text: m.text,
+        timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }));
+      
+      setChatHistories(prev => ({ 
+        ...prev, 
+        [activeChatId]: [...olderHistory, ...history] 
+      }));
+      setHasMore(prev => ({ ...prev, [activeChatId]: hasMoreData }));
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [activeChat?.messages, isOpen]);
+  }, [activeMessages, isOpen]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !activeChat || !currentUserId) return;
+    const trimmedMsg = newMessage.trim();
+    if (!trimmedMsg || !activeChat || !currentUserId || isSending) return;
 
     const newMsgObj: Message = {
       id: Date.now().toString(), // Will be replaced by DB generated ID
       senderId: currentUserId,
-      text: newMessage.trim(),
+      text: trimmedMsg,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    // Optimistically update UI
+    // Optimistically update History
+    const partnerId = activeChatId!;
+    setChatHistories(prev => ({
+      ...prev,
+      [partnerId]: [...(prev[partnerId] || []), newMsgObj]
+    }));
+
+    // Update Sidebar
     setConversations(prev => prev.map(conv => {
-      if (conv.id === activeChatId) {
-        return { ...conv, messages: [...conv.messages, newMsgObj] };
+      if (conv.id === partnerId) {
+        return { ...conv, messages: [newMsgObj] };
       }
       return conv;
     }));
 
     setNewMessage("");
+    setIsSending(true);
 
-    // Persist to Supabase
-    await supabase.from('messages').insert({
-      sender_id: currentUserId,
-      receiver_id: activeChat.participant.id,
-      text: newMessage.trim()
-    });
+    try {
+      // Persist to Supabase
+      await supabase.from('messages').insert({
+        sender_id: currentUserId,
+        receiver_id: activeChat.participant.id,
+        text: trimmedMsg
+      });
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      // Optional: Rollback optimistic update or show error
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -153,10 +295,18 @@ export default function FloatingChat() {
       {/* Floating Button */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
-          className="w-14 h-14 bg-emerald-500 hover:bg-emerald-400 text-slate-900 rounded-full flex items-center justify-center shadow-2xl transition-all transform hover:scale-105 active:scale-95"
+          onClick={() => {
+            setIsOpen(true);
+            setUnreadCount(0);
+          }}
+          className="relative w-14 h-14 bg-emerald-500 hover:bg-emerald-400 text-slate-900 rounded-full flex items-center justify-center shadow-2xl transition-all transform hover:scale-105 active:scale-95"
         >
           <MessageCircle size={28} />
+          {unreadCount > 0 && (
+            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center border-2 border-slate-900 animate-in zoom-in duration-300">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </div>
+          )}
         </button>
       )}
 
@@ -242,9 +392,25 @@ export default function FloatingChat() {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar flex flex-col">
-                  {activeChat.messages.map((msg, idx) => {
+                  {!chatHistories[activeChatId!] ? (
+                    <div className="flex-1 flex items-center justify-center py-10">
+                      <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : (
+                    <>
+                      {hasMore[activeChatId!] && (
+                        <button 
+                          onClick={loadMoreMessages}
+                          className="self-center py-2 px-4 text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors uppercase tracking-widest"
+                        >
+                          Load Older Messages
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {activeMessages.map((msg, idx) => {
                     const isMine = msg.senderId === currentUserId;
-                    const prevMsg = idx > 0 ? activeChat.messages[idx - 1] : null;
+                    const prevMsg = idx > 0 ? activeMessages[idx - 1] : null;
                     const isConsecutive = prevMsg?.senderId === msg.senderId;
 
                     return (
@@ -288,17 +454,19 @@ export default function FloatingChat() {
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Message..."
-                      className="flex-1 bg-slate-800 border border-white/10 rounded-full px-4 py-2.5 text-[14px] text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                      maxLength={2000}
+                      disabled={isSending}
+                      className="flex-1 bg-slate-800 border border-white/10 rounded-full px-4 py-2.5 text-[14px] text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-50"
                     />
                     <button
                       type="submit"
-                      disabled={!newMessage.trim()}
-                      className={`p-2.5 rounded-full flex items-center justify-center transition-colors ${newMessage.trim()
+                      disabled={!newMessage.trim() || isSending}
+                      className={`p-2.5 rounded-full flex items-center justify-center transition-colors ${newMessage.trim() && !isSending
                         ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
                         : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                         }`}
                     >
-                      <Send size={18} className={newMessage.trim() ? "translate-x-0.5" : ""} />
+                      <Send size={18} className={newMessage.trim() && !isSending ? "translate-x-0.5" : ""} />
                     </button>
                   </form>
                 </div>
