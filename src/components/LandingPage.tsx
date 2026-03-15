@@ -220,7 +220,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
   const typewritten = useTypewriter([
     "AI-Powered Code Evaluation",
     "Real-time Instructor Feedback",
-    "Ollama & Gemini Integration",
+    "Ollama & Gemini 2.0 Integration",
     "Student Progress Tracking",
     "Intelligent Code Analysis",
   ]);
@@ -578,7 +578,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                   <span className="ml-auto px-3 py-1 rounded-full text-xs font-bold border border-blue-500/30 bg-blue-500/10 text-blue-400">Cloud</span>
                 </div>
                 <div className="space-y-3 mb-6">
-                  {["Gemini 1.5 Flash / Pro models", "Highly detailed feedback", "Scales to any class size", "Rich natural language reports", "Industry-grade code analysis"].map((f, i) => (
+                  {["Gemini 2.0 Flash / Pro models", "Highly detailed feedback", "Scales to any class size", "Rich natural language reports", "Industry-grade code analysis"].map((f, i) => (
                     <div key={i} className="flex items-center gap-3 text-sm text-slate-400">
                       <CheckCircle size={14} className="text-blue-400 shrink-0" />
                       {f}
@@ -588,7 +588,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 <div className="bg-[#0d1117] rounded-xl p-4 border border-white/5 font-mono text-xs">
                   <div className="text-blue-400 mb-2">{">"} Requesting Gemini evaluation...</div>
                   <div className="text-slate-500 space-y-1">
-                    <div>→ Model: <span className="text-blue-300">gemini-1.5-flash</span></div>
+                    <div>→ Model: <span className="text-blue-300">gemini-2.0-flash</span></div>
                     <div>→ Analyzing 47 lines of Python...</div>
                     <div className="text-emerald-400">✓ Done. Score: 27.4/30</div>
                   </div>
