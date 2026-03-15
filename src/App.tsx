@@ -1,19 +1,23 @@
 import { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import { supabase } from "./lib/supabaseClient";
+import LandingPage from "./components/LandingPage";
 import AuthForm from "./components/AuthForm";
 import CodeEditor, { type DraftResume } from "./components/CodeEditor";
-import InstructorEvaluation from "./components/InstructorEvaluation"; // Updated Import
-import InstructorDashboard from "./components/InstructorDashboard"; // New Import
+import InstructorEvaluation from "./components/InstructorEvaluation";
+import InstructorDashboard from "./components/InstructorDashboard";
 import StudentDashboard from "./components/StudentDashboard";
-import ProblemList from "./components/ProblemList"; // New Import
+import ProblemList from "./components/ProblemList";
 import PageLoader from "./components/PageLoader";
 import FloatingChat from "./components/FloatingChat";
+import TestimonialPrompt from "./components/TestimonialPrompt";
 
 function App() {
   const [session, setSession] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Landing page gate — show landing for unauthenticated visitors
+  const [showLanding, setShowLanding] = useState(true);
 
   // VIEW STATES
   const [studentView, setStudentView] = useState<
@@ -65,7 +69,10 @@ function App() {
 
   if (loading) return <PageLoader message="Authenticating..." />;
 
-  if (!session) return <AuthForm />;
+  if (!session) {
+    if (showLanding) return <LandingPage onGetStarted={() => setShowLanding(false)} />;
+    return <AuthForm />;
+  }
 
   const renderAppContent = () => {
     // === INSTRUCTOR ROUTING ===
@@ -150,6 +157,7 @@ function App() {
     <>
       {renderAppContent()}
       <FloatingChat />
+      <TestimonialPrompt userId={session.user.id} />
     </>
   );
 }

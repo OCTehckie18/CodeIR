@@ -12,10 +12,14 @@ app.use(express.json());
 const usersRoutes = require("./routes/users.routes");
 const submissionsRoutes = require("./routes/submissions.routes");
 const evaluationsRoutes = require("./routes/evaluations.routes");
+const publicRoutes = require("./routes/public.routes");
+const testimonialsRoutes = require("./routes/testimonials.routes");
 
 app.use("/api", usersRoutes);
 app.use("/api", submissionsRoutes);
 app.use("/api", evaluationsRoutes);
+app.use("/api/public", publicRoutes);
+app.use("/api", testimonialsRoutes);
 
 // Basic health check route
 app.get("/api/health", (req, res) => {
