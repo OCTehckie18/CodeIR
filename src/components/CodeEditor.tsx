@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
 const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
-import { evaluateCode } from "../lib/aiService";
+import { evaluateCode, checkOllamaConnection } from "../lib/aiService";
 import {
   Code as CodeIcon,
   Brain,
@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Copy,
   Check,
+  Activity,
 } from "lucide-react";
 
 import {
@@ -77,6 +78,28 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [copiedIr, setCopiedIr] = useState(false);
+  const [engine] = useState(localStorage.getItem("aiEngine") || "ollama");
+  const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    
+    const checkConnection = async () => {
+      const isConnected = await checkOllamaConnection();
+      setConnectionStatus(isConnected ? "success" : "error");
+    };
+
+    if (engine === "ollama") {
+      // Check immediately on mount/engine change
+      checkConnection();
+      // Then poll every 5 seconds
+      interval = setInterval(checkConnection, 5000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [engine]);
 
   const handleCopyIr = () => {
     if (validationStatus !== "valid") {
@@ -397,6 +420,27 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
+                      {engine === "ollama" && (
+                        <div
+                          className={`px-3 py-1.5 text-[10px] font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-1.5 border ${
+                            connectionStatus === "success" 
+                               ? "bg-green-500/20 text-green-400 border-green-500/30"
+                               : connectionStatus === "error"
+                               ? "bg-red-500/20 text-red-400 border-red-500/30"
+                               : "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                          }`}
+                        >
+                          {connectionStatus === "success" ? (
+                             <CheckCircle2 size={12} />
+                          ) : connectionStatus === "error" ? (
+                             <Activity size={12} />
+                          ) : (
+                             <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain opacity-50" />
+                          )}
+                          {connectionStatus === "success" ? "OLLAMA OK" : connectionStatus === "error" ? "OLLAMA OFFLINE" : "CHECKING..."}
+                        </div>
+                      )}
+                      
                       {/* Run Validation Button */}
                       <button
                         id="run-validation-btn"

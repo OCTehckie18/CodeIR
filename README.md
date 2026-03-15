@@ -4,7 +4,7 @@
 
 **CodeIR** is a full-stack educational web application designed to bridge the gap between high-level source code and compiler Intermediate Representations (IR). It features a sophisticated dual-role architecture (Student/Instructor) enabling real-time code submission, AI-powered code evaluation, IR visualization, rubric-based assessment, user profile management, and granular per-line code review comments.
 
-The system leverages a **Serverless Database Architecture** via Supabase alongside a **Dual AI Engine Architecture** (Google Gemini 1.5 Flash for cloud, and Ollama for secure local CPU inference). It strictly employs typed **TypeScript** interfaces on the frontend to ensure type safety across the full stack while utilizing delegated Row Level Security (RLS) for comprehensive data protection.
+The system leverages a **Serverless Database Architecture** via Supabase alongside a **Dual AI Engine Architecture** (Google Gemini 2.0 Flash for cloud, and Ollama for secure local CPU inference). It strictly employs typed **TypeScript** interfaces on the frontend to ensure type safety across the full stack while utilizing delegated Row Level Security (RLS) for comprehensive data protection.
 
 ---
 
@@ -39,7 +39,7 @@ graph TD
     Router --> DBController
     Router --> AdminClient
 
-    EvalController -->|HTTPS| Gemini[Google Gemini 2.5 API]
+    EvalController -->|HTTPS| Gemini[Google Gemini 2.0 API]
     EvalController -->|HTTP| Ollama[Local Ollama Engine]
     DBController -->|Bearer Token Auth - RLS| SB[Supabase DB / PostgREST]
     AdminClient -->|Service Role - Bypass RLS| SB
@@ -49,7 +49,7 @@ graph TD
 
 1. **Monaco Editor Integration:** Utilizes `@monaco-editor/react` to provide VS Code-level editing capabilities (IntelliSense, syntax highlighting) directly in the browser.
 2. **Dedicated Node.js Backend:** Centralizes API logic, protecting the Gemini AI pipeline and enforcing sequential relational database updates without exposing sensitive Supabase credentials to the client.
-3. **Dual AI Evaluation Pipeline (Gemini/Ollama):** Integrates with `@google/generative-ai` (Gemini 1.5 Flash) and local `Ollama` models via the backend API to evaluate code correctness, generate pseudocode (IR), and produce cross-language translations (Python, Java, C++).
+3. **Dual AI Evaluation Pipeline (Gemini/Ollama):** Integrates with `@google/generative-ai` (Gemini 2.0 Flash) and local `Ollama` models via the backend API to evaluate code correctness, generate pseudocode (IR), and produce cross-language translations (Python, Java, C++).
 4. **Dual Supabase Client Strategy:** The backend maintains two Supabase clients — an **admin client** (service role key, bypasses RLS) for system-level operations like sandbox problem creation, and an **auth-delegated client** (user JWT) for student-owned data ensuring RLS is enforced per-user.
 5. **Tailwind CSS v4:** Adopts the latest CSS-first configuration approach for high-performance atomic styling, utilizing `dvh` units for robust mobile responsiveness.
 6. **Relational Data Mapping:** Highly normalized PostgreSQL structure (`problems`, `submissions`, `pseudocodes`, `evaluations`, `review_comments`) with strict foreign keys to preserve learning traces and auditability.
@@ -89,7 +89,7 @@ graph TD
 
 ### AI & Evaluation Engine
 
-- **LLM Manager:** Google Gemini 1.5 Flash (Cloud API) & Local Ollama Engine (`qwen2.5-coder:7b`)
+- **LLM Manager:** Google Gemini 2.0 Flash (Cloud API) & Local Ollama Engine (`qwen2.5-coder:7b`)
 - **Features:** Toggleable AI engine, code correctness validation, high-level IR generation, cross-language translation.
 
 ---
@@ -276,7 +276,9 @@ codeir-spd/
 │   │   ├── ProblemList.tsx         # Problem Bank CRUD (role-aware)
 │   │   ├── InstructorDashboard.tsx # All submissions overview for instructors
 │   │   ├── InstructorEvaluation.tsx# Rubric grading + line review comments tabs
-│   │   └── ReviewComments.tsx      # Per-line CRUD comment panel (new)
+│   │   ├── ReviewComments.tsx      # Per-line CRUD comment panel (new)
+│   │   ├── DirectMessages.tsx      # Split UI chat component for teacher-student comms
+│   │   └── FloatingChat.tsx        # Floating chat widget component
 │   ├── lib/
 │   │   └── supabaseClient.ts       # Singleton Supabase client (frontend auth)
 │   ├── App.tsx                     # Role-based router / auth gatekeeper
@@ -395,7 +397,7 @@ npm run dev
 1. **Correctness Check** — Code + problem description sent to Gemini or Ollama; AI returns `CORRECT` or feedback.
 2. **IR Generation** — On `CORRECT`, AI generates high-level pseudocode displayed in the IR panel.
 3. **Language Translation** — Code simultaneously translated into Python, Java, and C++ for comparative learning.
-4. **Dual Engine Toggle** — Switch between Gemini (cloud, no local setup) and Ollama (local, offline-capable) from the UI.
+4. **Dual Engine Toggle & Active Polling** — Switch between Gemini (cloud) and Ollama (local) from the UI, with automatic background polling to ensure local engine availability.
 
 ### Draft Management
 
@@ -431,6 +433,13 @@ A LeetCode-style analytics dashboard:
 - **Rank System** — Novice → Apprentice → Intermediate → Expert based on problems solved.
 - **Live Stats** — Total solved, current streak, average score across all evaluations.
 - **Submissions Table** — Full history with status badges, feedback preview, and scores.
+
+### Real-Time Direct Messaging
+
+A lightweight, split-UI direct messaging widget embedded in the platform to facilitate teacher-student communication.
+- **Split Layout** — Left sidebar for active conversations, right panel for the ongoing chat.
+- **Visual Distinction** — Distinct message bubbles based on sender roles.
+- **Auto-scroll & Timestamps** — Fully responsive chat interface mimicking modern DM applications.
 
 ### Offline Manual Evaluation Mode
 

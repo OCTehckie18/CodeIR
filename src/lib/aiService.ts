@@ -30,6 +30,15 @@ async function generateOllamaContent(prompt: string): Promise<string> {
   }
 }
 
+export async function checkOllamaConnection(): Promise<boolean> {
+  try {
+    const res = await axios.get("http://127.0.0.1:11434/api/tags", { timeout: 3000 });
+    return res.status === 200;
+  } catch (error: any) {
+    return false;
+  }
+}
+
 export async function evaluateCode(code: string, description: string, engine: string) {
   if (engine === "ollama") {
     try {

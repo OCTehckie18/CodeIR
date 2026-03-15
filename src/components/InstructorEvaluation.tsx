@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
 const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
-import { evaluateCode, autoGradeCode } from "../lib/aiService";
+import { evaluateCode, autoGradeCode, checkOllamaConnection } from "../lib/aiService";
 import {
   Code as CodeIcon,
   FileJson,
@@ -64,6 +64,25 @@ export default function InstructorEvaluation({
   >("feedback");
   const [currentEngine, setCurrentEngine] = useState<string>(localStorage.getItem("aiEngine") || "ollama");
   const [copiedIr, setCopiedIr] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    
+    const checkConnection = async () => {
+      const isConnected = await checkOllamaConnection();
+      setConnectionStatus(isConnected ? "success" : "error");
+    };
+
+    if (currentEngine === "ollama") {
+      checkConnection();
+      interval = setInterval(checkConnection, 5000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [currentEngine]);
 
   // --- Fetch User & Specific Submission ---
   useEffect(() => {
@@ -309,6 +328,26 @@ export default function InstructorEvaluation({
                 <CodeIcon size={16} /> Student Source Code
               </span>
               <div className="flex items-center gap-2">
+                {currentEngine === "ollama" && (
+                  <div
+                    className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded transition-colors shadow-lg ${
+                      connectionStatus === "success" 
+                         ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                         : connectionStatus === "error"
+                         ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                         : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                    }`}
+                  >
+                    {connectionStatus === "success" ? (
+                       <CheckCircle2 size={10} />
+                    ) : connectionStatus === "error" ? (
+                       <Zap size={10} />
+                    ) : (
+                       <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain opacity-50" />
+                    )}
+                    {connectionStatus === "success" ? "Ollama OK" : connectionStatus === "error" ? "Ollama Offline" : "Checking..."}
+                  </div>
+                )}
                 <button
                   onClick={handleValidateCode}
                   disabled={isValidating}
