@@ -150,8 +150,8 @@ export default function AuthForm({ initialMode = "login" }: { initialMode?: "log
       />
 
       {/* ================= LEFT PANEL (Hero / Features) ================= */}
-      <div className="hidden lg:flex w-1/2 h-full relative flex-col justify-center items-start p-16 xl:p-24 overflow-hidden z-10">
-        <div className="mb-10 w-full max-w-xl">
+      <div className="hidden lg:flex w-1/2 min-h-[600px] h-full relative flex-col justify-center items-start p-8 xl:p-16 overflow-y-auto z-10">
+        <div className="mb-8 w-full max-w-xl mt-8">
           <div className="flex items-center gap-4 mb-8 cursor-pointer" onClick={() => window.location.assign("/")}>
             <img
               src={logo}
@@ -177,7 +177,7 @@ export default function AuthForm({ initialMode = "login" }: { initialMode?: "log
         </div>
 
         {/* Feature Cards in Glassmorphism */}
-        <div className="grid grid-cols-1 gap-4 w-full max-w-xl">
+        <div className="grid grid-cols-1 gap-4 w-full max-w-xl pb-8">
           {[
             {
               Icon: Code,
@@ -216,11 +216,11 @@ export default function AuthForm({ initialMode = "login" }: { initialMode?: "log
       </div>
 
       {/* ================= RIGHT PANEL (Form) ================= */}
-      <div className="flex w-full lg:w-1/2 h-full items-center justify-center p-6 sm:p-12 relative z-10 overflow-y-auto">
+      <div className="flex w-full lg:w-1/2 min-h-[600px] h-full items-center justify-center p-4 sm:p-8 md:p-12 relative z-10 overflow-y-auto py-12">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/10 via-transparent to-transparent lg:hidden pointer-events-none" />
 
         {/* Glassmorphism Form Container */}
-        <div className="w-full max-w-[420px] p-8 sm:p-10 rounded-[2rem] border border-black/10 dark:border-white/10 bg-white/[0.03] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative">
+        <div className="w-full max-w-[420px] p-6 sm:p-8 rounded-[2rem] border border-black/10 dark:border-white/10 bg-white/[0.03] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative my-auto">
           {/* Subtle inner highlight */}
           <div className="absolute inset-0 rounded-[2rem] border border-white/5 pointer-events-none mix-blend-overlay"></div>
 
