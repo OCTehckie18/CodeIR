@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
 const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
+import { evaluateCode, autoGradeCode } from "../lib/aiService";
 import {
   Code as CodeIcon,
   FileJson,
@@ -132,24 +133,20 @@ export default function InstructorEvaluation({
         "Instructor evaluating manual code via dashboard.";
       const engine = localStorage.getItem("aiEngine") || "ollama";
       setCurrentEngine(engine);
-      const payload = { code, description, engine };
-      const response = await axios.post(
-        `${baseUrl}/api/auto-grade`,
-        payload,
-      );
+      
+      const result = await autoGradeCode(code, description, engine);
 
-      if (response.data.success && response.data.data) {
+      if (result.success && result.data) {
         setScores({
-          correctness: response.data.data.correctness || 0,
-          efficiency: response.data.data.efficiency || 0,
-          style: response.data.data.style || 0,
+          correctness: result.data.correctness || 0,
+          efficiency: result.data.efficiency || 0,
+          style: result.data.style || 0,
         });
         setFeedback(
-          response.data.data.feedback ||
-            "Code evaluated successfully by Gemini.",
+          result.data.feedback || "Code evaluated successfully."
         );
       } else {
-        handleApiError({ message: response.data.error }, "Auto-grading");
+        handleApiError({ message: result.error || "Auto-grading failed" }, "Auto-grading");
       }
     } catch (error: any) {
       handleApiError(error, "Auto-grading");
@@ -166,26 +163,23 @@ export default function InstructorEvaluation({
         submission?.problems?.problem_statement || "Evaluate this code.";
       const engine = localStorage.getItem("aiEngine") || "ollama";
       setCurrentEngine(engine);
-      const payload = { code, description, engine };
-      const response = await axios.post(
-        `${baseUrl}/api/evaluate-code`,
-        payload,
-      );
+      
+      const result = await evaluateCode(code, description, engine);
 
-      if (response.data.success) {
-        if (response.data.status === "valid") {
-          setIrView(response.data.irOutput);
+      if (result.success) {
+        if (result.status === "valid") {
+          setIrView(result.irOutput);
         } else {
           setIrView(
             "{\n  'status': 'Validation Failed',\n  'feedback': " +
-              JSON.stringify(response.data.feedback) +
+              JSON.stringify(result.feedback) +
               "\n}",
           );
         }
       } else {
         setIrView(
           "{\n  'status': 'Validation Error',\n  'error': " +
-            JSON.stringify(response.data.error) +
+            JSON.stringify(result.error) +
             "\n}",
         );
       }

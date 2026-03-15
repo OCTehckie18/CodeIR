@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
 const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
+import { evaluateCode } from "../lib/aiService";
 import {
   Code as CodeIcon,
   Brain,
@@ -213,14 +214,7 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
 
     try {
       const engine = localStorage.getItem("aiEngine") || "ollama";
-      const response = await axios.post(
-        `${baseUrl}/api/evaluate-code`,
-        {
-          code,
-          description,
-          engine,
-        },
-      );
+      const result = await evaluateCode(code, description, engine);
 
       const {
         success,
@@ -229,7 +223,7 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
         irOutput: apiIrOutput,
         translatedCode: apiTranslatedCode,
         error,
-      } = response.data;
+      } = result;
 
       if (!success) {
         throw new Error(error || "Unknown validation error");
