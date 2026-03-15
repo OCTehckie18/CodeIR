@@ -18,6 +18,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   // Landing page gate — show landing for unauthenticated visitors
   const [showLanding, setShowLanding] = useState(true);
+  const [authMode, setAuthMode] = useState<"login" | "signup" | "update_password">("login");
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   // VIEW STATES
   const [studentView, setStudentView] = useState<
@@ -45,7 +47,13 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setAuthMode("update_password");
+        setIsPasswordRecovery(true);
+        setShowLanding(false); // Make sure they see the auth form
+      }
+
       setSession(session);
       if (session) fetchRole();
       else {
@@ -69,9 +77,18 @@ function App() {
 
   if (loading) return <PageLoader message="Authenticating..." />;
 
-  if (!session) {
-    if (showLanding) return <LandingPage onGetStarted={() => setShowLanding(false)} />;
-    return <AuthForm />;
+  if (!session || isPasswordRecovery) {
+    if (showLanding && !isPasswordRecovery) {
+      return (
+        <LandingPage
+          onGetStarted={(mode) => {
+            setAuthMode(mode);
+            setShowLanding(false);
+          }}
+        />
+      );
+    }
+    return <AuthForm initialMode={authMode} />;
   }
 
   const renderAppContent = () => {

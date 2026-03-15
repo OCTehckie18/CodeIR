@@ -8,7 +8,7 @@ import {
 import logo from "../assets/no-bg-white-logo.png";
 
 interface LandingPageProps {
-  onGetStarted: () => void;
+  onGetStarted: (mode: "login" | "signup") => void;
 }
 
 // ─── Typewriter Hook ───────────────────────────────────────────────────────
@@ -331,11 +331,11 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={onGetStarted} className="hidden md:block text-sm text-slate-400 hover:text-white transition-colors font-medium px-4 py-2">
+            <button onClick={() => onGetStarted("login")} className="hidden md:block text-sm text-slate-400 hover:text-white transition-colors font-medium px-4 py-2">
               Sign In
             </button>
             <button
-              onClick={onGetStarted}
+              onClick={() => onGetStarted("signup")}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transition-all duration-300 hover:-translate-y-0.5"
             >
               Get Started <ChevronRight size={14} />
@@ -387,14 +387,14 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             {/* CTA buttons */}
             <div className="flex flex-col sm:flex-row gap-4 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
               <button
-                onClick={onGetStarted}
+                onClick={() => onGetStarted("signup")}
                 className="group flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-base bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_40px_rgba(6,182,212,0.3)] hover:shadow-[0_0_60px_rgba(6,182,212,0.5)] transition-all duration-300 hover:-translate-y-1 animate-glow-pulse"
               >
                 Start Evaluating Code
                 <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </button>
               <button
-                onClick={onGetStarted}
+                onClick={() => onGetStarted("login")}
                 className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-base border border-white/10 text-slate-300 hover:border-cyan-500/40 hover:text-cyan-400 hover:bg-cyan-500/5 transition-all duration-300"
               >
                 <Terminal size={18} /> View Demo
@@ -923,14 +923,14 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={onGetStarted}
+              onClick={() => onGetStarted("signup")}
               className="group flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-black text-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_60px_rgba(6,182,212,0.4)] hover:shadow-[0_0_80px_rgba(6,182,212,0.6)] transition-all duration-300 hover:-translate-y-1"
             >
               Get Started Free
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </button>
             <button
-              onClick={onGetStarted}
+              onClick={() => onGetStarted("login")}
               className="flex items-center justify-center gap-2 px-10 py-5 rounded-2xl font-bold text-lg border border-white/10 text-slate-300 hover:border-white/20 hover:text-white transition-all duration-300"
             >
               <BookOpen size={20} /> Sign In

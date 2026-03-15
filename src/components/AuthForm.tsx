@@ -3,11 +3,11 @@ import { supabase } from "../lib/supabaseClient";
 import { Code, Settings, Atom, ChevronDown } from "lucide-react";
 import logo from "../assets/no-bg-white-logo.png";
 
-export default function AuthForm() {
+export default function AuthForm({ initialMode = "login" }: { initialMode?: "login" | "signup" | "update_password" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"student" | "instructor">("student");
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot_password" | "update_password">(initialMode);
   const [aiEngine, setAiEngine] = useState<"ollama" | "gemini">(
     (localStorage.getItem("aiEngine") as "ollama" | "gemini") || "ollama",
   );
@@ -32,10 +32,28 @@ export default function AuthForm() {
     setMsg(null);
   };
 
+  const switchToForgotPassword = () => {
+    setMode("forgot_password");
+    setMsg(null);
+  };
+
+  const switchToLogin = () => {
+    setMode("login");
+    setMsg(null);
+  };
+
   const handleAuthAction = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) {
+    if (mode === "forgot_password" && !email) {
+      setMsg({ type: "error", text: "Please enter your email." });
+      return;
+    }
+    if (mode === "update_password" && !password) {
+      setMsg({ type: "error", text: "Please enter your new password." });
+      return;
+    }
+    if ((mode === "login" || mode === "signup") && (!email || !password)) {
       setMsg({ type: "error", text: "Please fill in all fields." });
       return;
     }
@@ -44,7 +62,32 @@ export default function AuthForm() {
     setMsg(null);
 
     try {
-      if (mode === "signup") {
+      if (mode === "forgot_password") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin, // You may need to specify /reset or handle via onAuthStateChange
+        });
+        if (error) throw error;
+        setMsg({
+          type: "success",
+          text: "Recovery email sent. Please check your inbox.",
+        });
+        setLoading(false);
+        return; // Wait for user to check email
+      } else if (mode === "update_password") {
+        const { error } = await supabase.auth.updateUser({
+          password: password,
+        });
+        if (error) throw error;
+        setMsg({
+          type: "success",
+          text: "Password updated successfully! Redirecting...",
+        });
+        setLoading(false);
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        return;
+      } else if (mode === "signup") {
         // --- SIGNUP LOGIC ---
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -102,13 +145,14 @@ export default function AuthForm() {
       <img
         src={logo}
         alt=""
-        className="absolute -left-32 top-1/2 -translate-y-1/2 w-[800px] opacity-[0.03] rotate-[-15deg] pointer-events-none"
+        onClick={() => window.location.assign("/")}
+        className="absolute -left-32 top-1/2 -translate-y-1/2 w-[800px] opacity-[0.03] rotate-[-15deg] cursor-pointer"
       />
 
       {/* ================= LEFT PANEL (Hero / Features) ================= */}
       <div className="hidden lg:flex w-1/2 h-full relative flex-col justify-center items-start p-16 xl:p-24 overflow-hidden z-10">
         <div className="mb-10 w-full max-w-xl">
-          <div className="flex items-center gap-4 mb-8">
+          <div className="flex items-center gap-4 mb-8 cursor-pointer" onClick={() => window.location.assign("/")}>
             <img
               src={logo}
               alt="CodeIR Logo"
@@ -185,49 +229,71 @@ export default function AuthForm() {
             <img
               src={logo}
               alt="CodeIR Logo"
-              className="lg:hidden h-16 w-auto object-contain mb-6 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] animate-fade-in"
+              onClick={() => window.location.assign("/")}
+              className="lg:hidden h-16 w-auto object-contain mb-6 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] animate-fade-in cursor-pointer"
             />
 
             <div className="animate-fade-in-up text-center w-full">
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
-                {mode === "login" ? "Welcome Back" : "Create Account"}
+                {mode === "login" ? "Welcome Back" : 
+                 mode === "signup" ? "Create Account" : 
+                 mode === "forgot_password" ? "Reset Password" : "Update Password"}
               </h2>
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 {mode === "login"
                   ? "Enter your credentials to access your workspace."
-                  : "Sign up to start evaluating your code intelligently."}
+                  : mode === "signup"
+                  ? "Sign up to start evaluating your code intelligently."
+                  : mode === "forgot_password"
+                  ? "Enter your email to receive a password reset link."
+                  : "Enter your new password below."}
               </p>
             </div>
           </div>
 
           <form className="space-y-5 relative z-10" onSubmit={handleAuthAction}>
-            <div className="space-y-1.5">
-              <label className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1 font-semibold">
-                Email
-              </label>
-              <input
-                type="email"
-                placeholder="name@example.com"
-                className="w-full bg-black/20 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3.5 text-slate-800 dark:text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 focus:bg-black/40 transition-all shadow-inner"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-            </div>
+            {mode !== "update_password" && (
+              <div className="space-y-1.5">
+                <label className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1 font-semibold">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  placeholder="name@example.com"
+                  className="w-full bg-black/20 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3.5 text-slate-800 dark:text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 focus:bg-black/40 transition-all shadow-inner"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            )}
 
-            <div className="space-y-1.5">
-              <label className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1 font-semibold">
-                Password
-              </label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                className="w-full bg-black/20 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3.5 text-slate-800 dark:text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 focus:bg-black/40 transition-all shadow-inner"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
+            {mode !== "forgot_password" && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-1 font-semibold">
+                    {mode === "update_password" ? "New Password" : "Password"}
+                  </label>
+                  {mode === "login" && (
+                    <button
+                      type="button"
+                      onClick={switchToForgotPassword}
+                      className="text-xs text-cyan-500 hover:text-cyan-400 transition-colors mr-1"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  className="w-full bg-black/20 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3.5 text-slate-800 dark:text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 focus:bg-black/40 transition-all shadow-inner"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            )}
 
             {/* Role is only useful during Signup */}
             {mode === "signup" && (
@@ -278,21 +344,36 @@ export default function AuthForm() {
                   />
                 ) : mode === "login" ? (
                   "Login"
-                ) : (
+                ) : mode === "signup" ? (
                   "Create Account"
+                ) : mode === "forgot_password" ? (
+                  "Send Reset Link"
+                ) : (
+                  "Update Password"
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={toggleMode}
-                disabled={loading}
-                className="text-sm text-slate-600 dark:text-slate-400 hover:text-cyan-400 transition-colors text-center w-full font-medium"
-              >
-                {mode === "login"
-                  ? "Don't have an account? Sign up"
-                  : "Already have an account? Log in"}
-              </button>
+              {mode === "forgot_password" ? (
+                <button
+                  type="button"
+                  onClick={switchToLogin}
+                  disabled={loading}
+                  className="text-sm text-slate-600 dark:text-slate-400 hover:text-cyan-400 transition-colors text-center w-full font-medium"
+                >
+                  Back to login
+                </button>
+              ) : mode !== "update_password" ? (
+                <button
+                  type="button"
+                  onClick={toggleMode}
+                  disabled={loading}
+                  className="text-sm text-slate-600 dark:text-slate-400 hover:text-cyan-400 transition-colors text-center w-full font-medium"
+                >
+                  {mode === "login"
+                    ? "Don't have an account? Sign up"
+                    : "Already have an account? Log in"}
+                </button>
+              ) : null}
             </div>
 
             <div className="pt-6 animate-fade-in space-y-2 border-t border-black/10 dark:border-white/10 mt-6 relative z-10">
