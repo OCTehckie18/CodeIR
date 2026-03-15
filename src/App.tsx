@@ -69,8 +69,24 @@ function App() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (user?.user_metadata?.role) {
-      setRole(user.user_metadata.role);
+    
+    if (user) {
+      const existingRole = user.user_metadata?.role;
+      
+      if (existingRole) {
+        setRole(existingRole);
+      } else {
+        // Social Login user with no role assigned yet
+        console.log("New Social User detected, assigning default: student");
+        
+        // 1. Set local state so they can see the dashboard immediately
+        setRole("student");
+        
+        // 2. Persist this role to Supabase metadata for future logins
+        await supabase.auth.updateUser({
+          data: { role: "student" }
+        });
+      }
     }
     setLoading(false);
   };
