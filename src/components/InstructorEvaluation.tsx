@@ -111,16 +111,20 @@ export default function InstructorEvaluation({
           const data = response.data.data;
           setSubmission(data);
           setCode(data.source_code || "");
-          if (data.language) setLanguage(data.language);
-          if (data.pseudocodes) {
+          if (data.source_language) setLanguage(data.source_language);
+          
+          const pseudoObj = Array.isArray(data.pseudocodes) ? data.pseudocodes[0] : data.pseudocodes;
+          if (pseudoObj && pseudoObj.structured_blocks) {
             setIrView(
-              typeof data.pseudocodes.structured_blocks === "string"
-                ? data.pseudocodes.structured_blocks
-                : JSON.stringify(data.pseudocodes.structured_blocks, null, 2),
+              typeof pseudoObj.structured_blocks === "string"
+                ? pseudoObj.structured_blocks
+                : JSON.stringify(pseudoObj.structured_blocks, null, 2),
             );
           }
-          if (data.evaluations && data.evaluations.length > 0) {
-            const ev = data.evaluations[0];
+
+          const evalsArray = Array.isArray(data.evaluations) ? data.evaluations : (data.evaluations ? [data.evaluations] : []);
+          if (evalsArray.length > 0) {
+            const ev = evalsArray[0];
             if (ev.final_scores) {
               setScores(ev.final_scores);
             }

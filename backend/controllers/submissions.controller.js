@@ -238,7 +238,18 @@ exports.getSubmissionForEvaluation = async (req, res) => {
     try {
         const { submissionId } = req.params;
         const authSupabase = createAuthClient(req);
-        const { data, error } = await authSupabase.from("submissions")
+        
+        // Verify user identity
+        const { data: { user }, error: authError } = await authSupabase.auth.getUser();
+        if (authError || !user) {
+            return res.status(401).json({ success: false, error: "Unauthorized access." });
+        }
+
+        // Check if instructor. If so, use admin client to bypass RLS. Otherwise use auth client.
+        const isInstructor = user.user_metadata?.role === 'instructor';
+        const client = isInstructor ? supabase : authSupabase;
+
+        const { data, error } = await client.from("submissions")
             .select("*, pseudocodes ( structured_blocks ), evaluations ( final_scores, teacher_feedback )")
             .eq("submission_id", submissionId)
             .single();
