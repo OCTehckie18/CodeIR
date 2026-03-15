@@ -106,7 +106,7 @@ export default function StudentDashboard({
 
   useEffect(() => {
     fetchDashboardData();
-  }, [page]);
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -121,7 +121,7 @@ export default function StudentDashboard({
         axios.get(`${baseUrl}/api/profiles/${session.user.id}`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         }),
-        axios.get(`${baseUrl}/api/dashboard/${session.user.id}?limit=${pageSize}&offset=${page * pageSize}`, {
+        axios.get(`${baseUrl}/api/dashboard/${session.user.id}`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         }),
         axios.get(`${baseUrl}/api/profiles/${session.user.id}/skills`, {
@@ -346,6 +346,11 @@ export default function StudentDashboard({
         return "bg-slate-800/50"; // Empty
     }
   };
+
+  const paginatedSubmissions = submissions.slice(
+    page * pageSize,
+    (page + 1) * pageSize
+  );
 
   if (loading) {
     return <PageLoader message="Loading Dashboard..." />;
@@ -727,7 +732,7 @@ export default function StudentDashboard({
                       </tr>
                     </thead>
                     <tbody>
-                      {submissions.map((sub) => {
+                      {paginatedSubmissions.map((sub) => {
                         const evalObj = sub.evaluations
                           ? Array.isArray(sub.evaluations)
                             ? sub.evaluations[0]
@@ -842,11 +847,8 @@ export default function StudentDashboard({
                       })}
                       {submissions.length === 0 && (
                         <tr>
-                          <td
-                            colSpan={6}
-                            className="py-12 text-center text-slate-500 dark:text-slate-500 font-medium bg-white/[0.01] rounded-xl"
-                          >
-                            No recent submissions. Start coding!
+                          <td colSpan={6} className="py-8 text-center text-slate-500 font-medium bg-white/[0.01]">
+                            No submissions found.
                           </td>
                         </tr>
                       )}
@@ -854,9 +856,9 @@ export default function StudentDashboard({
                   </table>
                 </div>
                 {/* Pagination Controls */}
-                <div className="flex justify-between items-center mt-6 pt-4 border-t border-white/5">
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-white/5">
                   <div className="text-xs text-slate-500 font-medium">
-                    Showing {submissions.length} submissions
+                    Showing {submissions.length} total records
                   </div>
                   <div className="flex items-center gap-2">
                     <button

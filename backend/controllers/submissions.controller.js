@@ -194,7 +194,6 @@ exports.deleteSubmission = async (req, res) => {
 exports.getStudentDashboard = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
         const authSupabase = createAuthClient(req);
         const { data, error } = await authSupabase
             .from("submissions")
@@ -205,8 +204,7 @@ exports.getStudentDashboard = async (req, res) => {
                 evaluations ( teacher_feedback, final_scores )
             `)
             .eq("user_id", userId)
-            .order("submission_timestamp", { ascending: false })
-            .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+            .order("submission_timestamp", { ascending: false });
         if (error) throw error;
         res.status(200).json({ success: true, data });
     } catch (error) {
@@ -253,7 +251,6 @@ exports.getSubmissionForEvaluation = async (req, res) => {
 
 exports.getInstructorDashboard = async (req, res) => {
     try {
-        const { limit = 50, offset = 0 } = req.query;
         const authSupabase = createAuthClient(req);
 
         // 1. Identify the logged-in user via token
@@ -293,29 +290,24 @@ exports.getInstructorDashboard = async (req, res) => {
             return acc;
         }, {});
 
-        // Fetch submissions
-        const { data: rawData, error, count } = await supabase.from("submissions")
+        // Fetch ALL submissions (resolves client-side pagination, search, filter bug)
+        const { data: rawData, error } = await supabase.from("submissions")
             .select(`
                 submission_id, submission_timestamp, validation_status, source_code, user_id,
                 problems ( problem_statement ),
                 evaluations ( evaluation_id, final_scores )
-            `, { count: 'exact' })
-            .order("submission_timestamp", { ascending: false })
-            .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+            `)
+            .order("submission_timestamp", { ascending: false });
 
         if (error) {
             console.error("[Dashboard] Instructor fetch error:", error);
             throw error;
         }
 
-        // Fetch counts for ALL submissions (for global stats)
-        const { data: allStats, error: statsError } = await supabase.from("submissions")
-            .select("submission_id, evaluations ( evaluation_id, final_scores )");
-        
         let globalStats = { total: 0, evaluated: 0, pending: 0 };
-        if (!statsError && allStats) {
-            globalStats.total = allStats.length;
-            globalStats.evaluated = allStats.filter(s => 
+        if (rawData) {
+            globalStats.total = rawData.length;
+            globalStats.evaluated = rawData.filter(s => 
                 s.evaluations && (Array.isArray(s.evaluations) ? s.evaluations.length > 0 : Object.keys(s.evaluations).length > 0)
             ).length;
             globalStats.pending = globalStats.total - globalStats.evaluated;
@@ -328,12 +320,12 @@ exports.getInstructorDashboard = async (req, res) => {
             student_name: userMap[sub.user_id]?.name || "Unknown Student"
         }));
         
-        console.log(`[Dashboard] Fetched ${data?.length || 0} enriched submissions (total: ${count})`);
+        console.log(`[Dashboard] Fetched ${data?.length || 0} enriched submissions`);
         res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
         res.status(200).json({ 
             success: true, 
             data, 
-            total: count,
+            total: data?.length || 0,
             globalStats
         });
     } catch (error) {

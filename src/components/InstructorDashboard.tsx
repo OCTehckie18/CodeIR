@@ -41,7 +41,11 @@ export default function InstructorDashboard({
 
   useEffect(() => {
     fetchData();
-  }, [page]);
+  }, []);
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchQuery, filterStatus]);
 
   const fetchData = async (manual = false) => {
     if (manual) {
@@ -56,7 +60,7 @@ export default function InstructorDashboard({
       setUser(session.user);
 
       const response = await axios.get(
-        `${baseUrl}/api/instructor/dashboard?limit=${pageSize}&offset=${page * pageSize}&_t=${Date.now()}`,
+        `${baseUrl}/api/instructor/dashboard?_t=${Date.now()}`,
         {
           headers: { Authorization: `Bearer ${session.access_token}` },
         },
@@ -109,6 +113,11 @@ export default function InstructorDashboard({
 
     return nameMatch || emailMatch || problemMatch;
   });
+
+  const paginatedSubmissions = filteredSubmissions.slice(
+    page * pageSize,
+    (page + 1) * pageSize
+  );
 
   // Logout now handled by NavBar
 
@@ -316,7 +325,7 @@ export default function InstructorDashboard({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSubmissions.map((sub) => {
+                    {paginatedSubmissions.map((sub) => {
                       const evalObj = sub.evaluations
                         ? Array.isArray(sub.evaluations)
                           ? sub.evaluations[0]
@@ -427,7 +436,7 @@ export default function InstructorDashboard({
               {/* Pagination Controls */}
               <div className="flex justify-between items-center mt-4">
                 <div className="text-xs text-slate-500 font-medium">
-                  Showing {submissions.length} records
+                  Showing {filteredSubmissions.length} records
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -438,11 +447,11 @@ export default function InstructorDashboard({
                     Previous
                   </button>
                   <span className="text-xs font-bold text-slate-400 px-2">
-                    Page {page + 1}
+                    Page {page + 1} of {Math.max(1, Math.ceil(filteredSubmissions.length / pageSize))}
                   </span>
                   <button
                     onClick={() => setPage((p) => p + 1)}
-                    disabled={submissions.length < pageSize}
+                    disabled={(page + 1) * pageSize >= filteredSubmissions.length}
                     className="px-3 py-1 bg-white/5 border border-white/10 rounded text-xs font-bold disabled:opacity-40 hover:bg-white/10 transition-colors"
                   >
                     Next
