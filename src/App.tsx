@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
 import { supabase } from "./lib/supabaseClient";
 import LandingPage from "./components/LandingPage";
 import AuthForm from "./components/AuthForm";
@@ -37,8 +37,28 @@ function App() {
   >(undefined);
 
   useEffect(() => {
-    // ... (Your existing auth useEffect logic remains the same) ...
-    // Just ensure fetching role works as before
+    // Check for auth errors in URL (e.g. from GitHub/Google redirects)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    const error = hashParams.get("error_description") || searchParams.get("error_description");
+    const errorType = hashParams.get("error") || searchParams.get("error");
+
+    if (error) {
+      const decodedError = decodeURIComponent(error).replace(/\+/g, " ");
+      toast.error(decodedError, { duration: 5000 });
+      
+      // Clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      
+      // If it's a "User already registered" error, we should probably stay on the Login page
+      if (errorType === "access_denied" || error.includes("already registered")) {
+        setShowLanding(false);
+        setAuthMode("login");
+      }
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) fetchRole();
