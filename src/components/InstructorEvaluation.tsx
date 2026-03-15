@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
+const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
 import {
   Code as CodeIcon,
@@ -75,7 +76,7 @@ export default function InstructorEvaluation({
         // FETCH SPECIFIC SUBMISSION BASED ON ID
         try {
           const response = await axios.get(
-            `http://127.0.0.1:5000/api/submissions/${submissionId}`,
+            `${baseUrl}/api/submissions/${submissionId}`,
             {
               headers: { Authorization: `Bearer ${session?.access_token}` },
             },
@@ -133,7 +134,7 @@ export default function InstructorEvaluation({
       setCurrentEngine(engine);
       const payload = { code, description, engine };
       const response = await axios.post(
-        "http://127.0.0.1:5000/api/auto-grade",
+        `${baseUrl}/api/auto-grade`,
         payload,
       );
 
@@ -167,7 +168,7 @@ export default function InstructorEvaluation({
       setCurrentEngine(engine);
       const payload = { code, description, engine };
       const response = await axios.post(
-        "http://127.0.0.1:5000/api/evaluate-code",
+        `${baseUrl}/api/evaluate-code`,
         payload,
       );
 
@@ -229,7 +230,7 @@ export default function InstructorEvaluation({
           validationStatus: "valid",
         };
         const subRes = await axios.post(
-          "http://127.0.0.1:5000/api/submissions",
+          `${baseUrl}/api/submissions`,
           subPayload,
           {
             headers: { Authorization: `Bearer ${session?.access_token}` },
@@ -253,7 +254,7 @@ export default function InstructorEvaluation({
       };
 
       const response = await axios.post(
-        "http://127.0.0.1:5000/api/evaluations",
+        `${baseUrl}/api/evaluations`,
         payload,
         {
           headers: { Authorization: `Bearer ${session?.access_token}` },

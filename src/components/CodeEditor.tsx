@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
+const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
 import {
   Code as CodeIcon,
@@ -104,8 +105,8 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
       try {
         const problemId = problem?.problem_id;
         const url = problemId
-          ? `http://127.0.0.1:5000/api/drafts/${currentUser.id}?problemId=${problemId}`
-          : `http://127.0.0.1:5000/api/drafts/${currentUser.id}`;
+          ? `${baseUrl}/api/drafts/${currentUser.id}?problemId=${problemId}`
+          : `${baseUrl}/api/drafts/${currentUser.id}`;
 
         const res = await axios.get(url, {
           headers: { Authorization: `Bearer ${session?.access_token}` },
@@ -167,7 +168,7 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
       };
 
       const response = await axios.post(
-        "http://127.0.0.1:5000/api/submissions",
+        `${baseUrl}/api/submissions`,
         payload,
         {
           headers: {
@@ -213,7 +214,7 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
     try {
       const engine = localStorage.getItem("aiEngine") || "ollama";
       const response = await axios.post(
-        "http://127.0.0.1:5000/api/evaluate-code",
+        `${baseUrl}/api/evaluate-code`,
         {
           code,
           description,

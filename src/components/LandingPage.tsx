@@ -234,11 +234,12 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/public/stats")
+    const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
+    fetch(`${baseUrl}/api/public/stats`)
       .then((r) => r.json())
       .then((d) => { if (d.success) setLiveStats(d.stats); })
       .catch(() => { });
-    fetch("http://127.0.0.1:5000/api/public/testimonials")
+    fetch(`${baseUrl}/api/public/testimonials`)
       .then((r) => r.json())
       .then((d) => { if (d.success) setTestimonials(d.testimonials || []); })
       .catch(() => { });

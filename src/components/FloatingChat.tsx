@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, User as UserIcon, MessageCircle, X, Search } from "lucide-react";
+const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 
 import { supabase } from "../lib/supabaseClient";
 
@@ -55,7 +56,7 @@ export default function FloatingChat() {
           currentUserIdRef.current = userId;
         }
 
-        const usersResponse = await fetch('http://127.0.0.1:5000/api/users');
+        const usersResponse = await fetch(`${baseUrl}/api/users`);
         const usersData = await usersResponse.json();
         const allUsers = usersData.success ? usersData.users : [];
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
 import NavBar from "./NavBar";
+const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 import PageLoader from "./PageLoader";
 import ProfileSettings from "./ProfileSettings";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
@@ -72,7 +73,7 @@ export default function StudentDashboard({
         const { data: { session } } = await supabase.auth.getSession();
         const randomColor =
           skillColorPalette[Math.floor(Math.random() * skillColorPalette.length)];
-        const res = await axios.post(`http://127.0.0.1:5000/api/profiles/${user.id}/skills`, 
+        const res = await axios.post(`${baseUrl}/api/profiles/${user.id}/skills`, 
           { name: newSkillName.trim(), color: randomColor },
           { headers: { Authorization: `Bearer ${session?.access_token}` } }
         );
@@ -91,7 +92,7 @@ export default function StudentDashboard({
   const handleDeleteSkill = async (skillId: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await axios.delete(`http://127.0.0.1:5000/api/skills/${skillId}`,
+      const res = await axios.delete(`${baseUrl}/api/skills/${skillId}`,
         { headers: { Authorization: `Bearer ${session?.access_token}` } }
       );
       if (res.data.success) {
@@ -117,13 +118,13 @@ export default function StudentDashboard({
 
       // allSettled: a profile failure NEVER blocks submissions from loading
       const [profileResult, dashboardResult, skillsResult] = await Promise.allSettled([
-        axios.get(`http://127.0.0.1:5000/api/profiles/${session.user.id}`, {
+        axios.get(`${baseUrl}/api/profiles/${session.user.id}`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         }),
-        axios.get(`http://127.0.0.1:5000/api/dashboard/${session.user.id}?limit=${pageSize}&offset=${page * pageSize}`, {
+        axios.get(`${baseUrl}/api/dashboard/${session.user.id}?limit=${pageSize}&offset=${page * pageSize}`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         }),
-        axios.get(`http://127.0.0.1:5000/api/profiles/${session.user.id}/skills`, {
+        axios.get(`${baseUrl}/api/profiles/${session.user.id}/skills`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         }),
       ]);
@@ -308,7 +309,7 @@ export default function StudentDashboard({
         data: { session },
       } = await supabase.auth.getSession();
       const response = await axios.delete(
-        `http://127.0.0.1:5000/api/submissions/${submissionId}`,
+        `${baseUrl}/api/submissions/${submissionId}`,
         { headers: { Authorization: `Bearer ${session?.access_token}` } },
       );
       if (response.data.success) {

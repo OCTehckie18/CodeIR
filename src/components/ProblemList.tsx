@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import NavBar from "./NavBar";
 import PageLoader from "./PageLoader";
 import { handleApiError } from "../lib/errorHandler";
+const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 
 import {
   Plus,
@@ -73,7 +74,7 @@ export default function ProblemList({
   const fetchProblems = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://127.0.0.1:5000/api/problems");
+      const response = await axios.get(`${baseUrl}/api/problems`);
       if (response.data.success) {
         setProblems(response.data.data);
       }
@@ -99,11 +100,11 @@ export default function ProblemList({
     try {
       if (editingProblem) {
         await axios.put(
-          `http://127.0.0.1:5000/api/problems/${editingProblem.problem_id}`,
+          `${baseUrl}/api/problems/${editingProblem.problem_id}`,
           formData,
         );
       } else {
-        await axios.post("http://127.0.0.1:5000/api/problems", formData);
+        await axios.post(`${baseUrl}/api/problems`, formData);
       }
       setShowForm(false);
       setEditingProblem(null);
@@ -133,7 +134,7 @@ export default function ProblemList({
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this problem?")) return;
     try {
-      await axios.delete(`http://127.0.0.1:5000/api/problems/${id}`);
+      await axios.delete(`${baseUrl}/api/problems/${id}`);
       fetchProblems();
     } catch (error: any) {
       handleApiError(error, "Deleting problem");

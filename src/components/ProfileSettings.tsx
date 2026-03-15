@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 import { supabase } from "../lib/supabaseClient";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
 import {
@@ -56,7 +57,7 @@ export default function ProfileSettings({
           data: { session },
         } = await supabase.auth.getSession();
         const response = await axios.get(
-          `http://127.0.0.1:5000/api/profiles/${userId}`,
+          `${baseUrl}/api/profiles/${userId}`,
           { headers: { Authorization: `Bearer ${session?.access_token}` } },
         );
         if (response.data.success) {
@@ -83,7 +84,7 @@ export default function ProfileSettings({
         data: { session },
       } = await supabase.auth.getSession();
       const response = await axios.put(
-        `http://127.0.0.1:5000/api/profiles/${userId}`,
+        `${baseUrl}/api/profiles/${userId}`,
         { display_name: displayName, bio, theme_preference: themePreference },
         { headers: { Authorization: `Bearer ${session?.access_token}` } },
       );
@@ -134,7 +135,7 @@ export default function ProfileSettings({
         data: { session },
       } = await supabase.auth.getSession();
       const response = await axios.delete(
-        `http://127.0.0.1:5000/api/profiles/${userId}`,
+        `${baseUrl}/api/profiles/${userId}`,
         { headers: { Authorization: `Bearer ${session?.access_token}` } },
       );
 
