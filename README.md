@@ -1,15 +1,13 @@
-# CodeIR: Advanced IR Visualization & Evaluation Platform
+# CodeIR: The Ultimate AI-Powered Code Evaluation Platform
 
-[![Deployment - Vercel](https://img.shields.io/badge/Deployment-Vercel-blue?logo=vercel&logoColor=white)](https://codeir.vercel.app)
-[![Backend - Vercel](https://img.shields.io/badge/Backend-Vercel-black?logo=vercel&logoColor=white)](https://code-ir-backend.vercel.app/)
-[![Database - Supabase](https://img.shields.io/badge/Database-Supabase-3ecf8e?logo=supabase&logoColor=white)](https://supabase.com)
-[![AI - Gemini](https://img.shields.io/badge/AI-Gemini%202.0-red?logo=google-gemini&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![Deployment - Vercel](https://img.shields.io/badge/Status-Project_Live-success?style=for-the-badge&logo=vercel&logoColor=white)](https://codeir.vercel.app)
+[![Backend - Vercel](https://img.shields.io/badge/Backend-Live-blue?style=for-the-badge&logo=vercel&logoColor=white)](https://code-ir-backend.vercel.app/)
+[![Database - Supabase](https://img.shields.io/badge/Database-Supabase-3ecf8e?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+[![AI - Multi_Engine](https://img.shields.io/badge/AI-Multi--Engine-ff69b4?style=for-the-badge&logo=google-gemini&logoColor=white)](https://codeir.vercel.app)
 
-## Overview
+**CodeIR** is a state-of-the-art, production-ready educational platform designed to bridge the conceptual gap between source code and compiler Intermediate Representations (IR). Developed for both students and instructors, CodeIR provides a high-fidelity environment for code submission, AI-powered logic extraction, and granular per-line assessment.
 
-**CodeIR** is a state-of-the-art educational platform designed to bridge the conceptual gap between high-level source code and compiler Intermediate Representations (IR). Developed for both students and instructors, CodeIR provides a high-fidelity environment for code submission, AI-powered logic extraction, and granular per-line assessment.
-
-The platform utilizes a **Hybrid AI Strategy** (Cloud Gemini 2.0 + Local Ollama) and a **Serverless-Relational DB Backbone** to deliver real-time feedback and long-term learning analytics.
+The platform utilizes a **Triple-Engine AI Strategy** (Cloud Gemini 2.0, Lightning-Fast Groq, and Local Ollama) to deliver unprecedented evaluation depth and performance.
 
 ---
 
@@ -33,7 +31,7 @@ graph TD
 
     subgraph "Backend Layer (Node.js)"
         Router["🛣️ API Router"]
-        AI_Eng["🧠 Gemini/Ollama Controller"]
+        AI_Eng["🧠 Multi-Model AI Controller"]
         DB_Eng["🗄️ Supabase Admin/Auth Client"]
     end
 
@@ -42,6 +40,7 @@ graph TD
     Router --> DB_Eng
 
     AI_Eng -->|"Cloud API"| Gemini["☁️ Google Gemini 2.0"]
+    AI_Eng -->|"LPU Inference"| Groq["⚡ Groq / Llama 3.3"]
     AI_Eng -->|"Local Proxy"| Ollama["💻 Ollama Engine"]
     DB_Eng -->|"RLS Delegated"| SB["🟢 Supabase DB"]
 ```
@@ -49,12 +48,13 @@ graph TD
 ### Key Technical Pillars
 
 1.  **Monaco Editor Integration**: Provides a full VS Code-like experience with syntax highlighting and IntelliSense for multiple languages.
-2.  **Dual AI Evaluation Pipeline**:
+2.  **Triple AI Evaluation Pipeline**:
     *   **Google Gemini 2.0 Flash**: High-performance cloud inference for complex IR generation and multi-language translation.
-    *   **Local Ollama**: Privacy-focused, offline-capable inference using models like `qwen2.5-coder:7b`.
+    *   **Groq LPU**: Lightning-fast inference using Llama 3.3 models for near-instantaneous feedback.
+    *   **Local Ollama**: Privacy-focused, offline-capable inference for environments with strict data controls.
 3.  **Automatic Account Linking**: When a user logs in via **Google** with an email already registered via Email/Password, CodeIR automatically merges the identities into a single unified profile.
 4.  **Smart Role Assignment**: Fresh users joining via OAuth (Social Login) are automatically assigned the **'student'** role and have their profile metadata initialized in Supabase instantly.
-5.  **Dynamic RLS Proxying**: The backend uses user JWTs to perform database operations, ensuring PostgreSQL **Row Level Security** is always enforced, while the Admin Client handles system-level orchestration.
+5.  **Dynamic RLS Proxying**: The backend uses user JWTs to perform database operations, ensuring PostgreSQL **Row Level Security** is always enforced.
 
 ---
 
@@ -74,8 +74,8 @@ graph TD
 
 ### ☁️ Shared Features
 *   **Real-Time DMs**: Integrated chat widget for instant teacher-student communication.
-*   **Theme Engine**: System-synced Dark/Light mode persisted across devices in user metadata.
-*   **Testimonials**: Performance-gated feedback system where top students can share their experience on the landing page.
+*   **Theme Engine**: System-synced Dark/Light mode persisted across devices.
+*   **Live Metrics**: Real-time platform statistics showing total evaluations and global averages.
 
 ---
 
@@ -92,12 +92,9 @@ graph TD
 *   `GET /api/profiles/:userId`: Fetch metadata (display_name, bio, theme, avatar).
 *   `PUT /api/profiles/:userId`: Update profile configuration.
 *   `GET /api/profiles/:userId/skills`: Fetch student skill list.
-*   `POST /api/profiles/:userId/skills`: Add a new skill badge.
-*   `DELETE /api/skills/:skillId`: Remove a skill.
 
-### 📝 Submissions & Drafts
+### 📝 Submissions & Dashboards
 *   `GET /api/dashboard/:userId`: Full student history (heatmaps + submissions).
-*   `GET /api/drafts/:userId`: Fetch the latest unsubmitted draft for a user.
 *   `POST /api/submissions`: Create a new validated submission or save a draft.
 *   `GET /api/instructor/dashboard`: Overarching view of every student attempt.
 
@@ -113,8 +110,7 @@ graph TD
 ### 1. Prerequisites
 *   Node.js (v18+) & NPM.
 *   Supabase Project URL & Keys.
-*   Google Generative AI API Key.
-*   (Optional) Ollama running locally for offline features.
+*   AI API Keys (Gemini, Groq).
 
 ### 2. Environment Variables
 
@@ -122,6 +118,7 @@ graph TD
 ```env
 VITE_SUPABASE_URL=https://your-proj.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhb...
+VITE_API_URL=https://your-backend.vercel.app
 ```
 
 **Backend (`/backend/.env`)**
@@ -130,70 +127,27 @@ PORT=5000
 SUPABASE_URL=https://your-proj.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJhb...
 GEMINI_API_KEY=AIzaSy...
+GROQ_API_KEY=gsk_...
 ```
 
-### 3. Vercel Deployment Configuration
+### 3. Vercel Deployment
 
-**Frontend Deployment**:
+**Frontend**:
 1. Connect GitHub repo to Vercel.
-2. Set Root Directory to `./` (base of repo).
-3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to Vercel Env Vars.
-4. **Important**: Set `VITE_API_URL` to your Vercel Backend URL (example: `https://code-ir-backend.vercel.app`).
+2. Set Root Directory to `./`.
+3. Add Envs: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`.
 
-**Backend Deployment**:
+**Backend**:
 1. Create a separate Vercel project for the `backend/` folder.
 2. Set Root Directory to `backend/`.
-3. Add all `backend/.env` variables to Vercel.
-4. Set **Serverless Function Timeout** to 60s (to allow AI to process).
-
----
-
-## 🔒 Security Configuration
-
-### Supabase Settings
-1.  **Authentication -> Providers -> Email**: Disable "Confirm Email" for faster user onboarding (optional).
-2.  **Authentication -> Providers -> Google**: Enable and provide Client ID/Secret from Google Cloud.
-3.  **Authentication -> URL Configuration**:
-    *   **Site URL**: `https://codeir.vercel.app`
-    *   **Redirect URLs**: `https://codeir.vercel.app/**`
-4.  **Identity Linking**: Check **"Link accounts with same email"** to allow seamless Google/Password account merging.
-
-### RLS Policies
-Ensure you apply the following logic to your `submissions` table:
-```sql
--- Allow students to insert their own work
-CREATE POLICY "Users can insert their own submissions" ON submissions 
-FOR INSERT TO authenticated 
-WITH CHECK (auth.uid() = user_id);
-
--- Allow instructors to view all student attempts
--- (Handled via Admin Client in backend for dashboard visualization)
-```
-
----
-
-## 📂 Project Structure
-
-```text
-codeir-spd/
-├── backend/                  # Node.js/Express API Gateway
-│   ├── index.js              # Server entry & high-level routing
-│   ├── routes/               # Modularized API endpoints
-│   ├── controllers/          # Business logic & AI orchestration
-│   └── middleware/           # Auth verification & Error handling
-├── src/                      # React TypeScript Frontend
-│   ├── components/           # UI Components (Auth, Dashboard, Editor)
-│   ├── lib/                  # Client-side singletons (Supabase)
-│   ├── assets/               # Brand & Static assets
-│   └── App.tsx               # Global Router & Auth Guard
-└── public/                   # Static browser assets
-```
+3. Add all `backend/.env` variables.
+4. Set **Serverless Function Timeout** to 60s.
 
 ---
 
 ## 📜 License & Usage
-**Academic Use License** | Developed by [OCTehckie18](https://github.com/OCTehckie18) & team.
-This platform is intended for teaching compiler theory and advanced programming logic.
+**Academic Production Instance** | Developed by [OCTehckie18](https://github.com/OCTehckie18) & Team CodeIR.
+This platform is intended for advanced computer science education and compiler theory study.
 
 ---
-*Powered by Team CodeIR.*
+*Powered by Team CodeIR. Project officially LIVE.*

@@ -187,7 +187,7 @@ export default function AuthForm({ initialMode = "login" }: { initialMode?: "log
       />
 
       {/* ================= LEFT PANEL (Hero / Features) ================= */}
-      <div className="hidden lg:flex w-1/2 min-h-[600px] h-full relative flex-col justify-center items-start p-8 xl:p-16 overflow-y-auto z-10">
+      <div className="hidden lg:flex w-1/2 min-h-[600px] h-full relative flex-col justify-center items-start p-8 xl:p-16 overflow-y-auto z-10 scrollbar-hide">
         <div className="mb-8 w-full max-w-xl mt-8">
           <div className="flex items-center gap-4 mb-8 cursor-pointer" onClick={() => window.location.assign("/")}>
             <img
@@ -253,7 +253,7 @@ export default function AuthForm({ initialMode = "login" }: { initialMode?: "log
       </div>
 
       {/* ================= RIGHT PANEL (Form) ================= */}
-      <div className="flex w-full lg:w-1/2 min-h-[600px] h-full items-center justify-center p-4 sm:p-8 md:p-12 relative z-10 overflow-y-auto py-12">
+      <div className="flex w-full lg:w-1/2 min-h-[600px] h-full items-center justify-center p-4 sm:p-8 md:p-12 relative z-10 overflow-y-auto py-12 scrollbar-hide">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/10 via-transparent to-transparent lg:hidden pointer-events-none" />
 
         {/* Glassmorphism Form Container */}
@@ -498,8 +498,8 @@ export default function AuthForm({ initialMode = "login" }: { initialMode?: "log
 
           <div className="pt-6 text-center relative z-10">
             <p className="text-slate-500 dark:text-slate-500 text-xs font-semibold uppercase tracking-widest flex items-center justify-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
-              In Development Phase
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Production Deployment
             </p>
           </div>
         </div>

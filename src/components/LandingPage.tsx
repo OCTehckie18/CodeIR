@@ -990,7 +990,10 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           <div className="flex items-center gap-3">
             <img src={logo} alt="CodeIR" className="h-7 w-auto opacity-60" />
             <span className="text-slate-500 font-semibold text-sm">CodeIR</span>
-            <span className="text-slate-700 text-xs">— In Development Phase</span>
+            <span className="text-emerald-500 text-xs font-bold uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Instance
+            </span>
           </div>
           <div className="flex items-center gap-6 text-xs text-slate-600">
             {["Features", "AI Models", "Dashboards"].map((l) => (
