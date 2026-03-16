@@ -12,7 +12,7 @@ import {
   Languages,
   Save,
   Check,
-  Activity,
+  // Activity,
   AlertCircle,
   CheckCircle2,
   Copy,
@@ -63,9 +63,9 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
     resumeDraft
       ? ["Resuming your draft — pick up where you left off!"]
       : [
-          "Write a function to optimize the IR...",
-          "Check for null pointers in your logic.",
-        ],
+        "Write a function to optimize the IR...",
+        "Check for null pointers in your logic.",
+      ],
   );
   const [irOutput, setIrOutput] = useState(
     "{\n  'block': 'entry',\n  'ops': []\n}",
@@ -87,22 +87,22 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    
+
     const checkConnection = async () => {
       const isConnected = await checkOllamaConnection();
       setConnectionStatus(isConnected ? "success" : "error");
     };
 
     const fetchModels = async () => {
-        const models = await getAvailableModels();
-        setAvailableModels(models);
-        if (models.length > 0) {
-            // Auto-detection logic: prioritize qwen2.5-coder
-            const bestModel = models.find(m => m.toLowerCase().includes("qwen2.5-coder")) || 
-                              models.find(m => m.toLowerCase().includes("coder")) ||
-                              models[0];
-            setSelectedModel(bestModel);
-        }
+      const models = await getAvailableModels();
+      setAvailableModels(models);
+      if (models.length > 0) {
+        // Auto-detection logic: prioritize qwen2.5-coder
+        const bestModel = models.find(m => m.toLowerCase().includes("qwen2.5-coder")) ||
+          models.find(m => m.toLowerCase().includes("coder")) ||
+          models[0];
+        setSelectedModel(bestModel);
+      }
     };
 
     if (engine === "ollama") {
@@ -166,7 +166,7 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
       }
     };
     init();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle Code Submission
@@ -437,7 +437,7 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
                     <div className="flex items-center gap-2">
                       {engine === "ollama" && (
                         <div className="flex items-center gap-2 group relative">
-                           {availableModels.length > 0 && (
+                          {availableModels.length > 0 && (
                             <select
                               className="bg-slate-50 dark:bg-slate-950 text-[10px] text-emerald-200 border border-emerald-500/30 rounded px-2 py-1 outline-none hover:bg-slate-900 transition-colors cursor-pointer"
                               value={selectedModel}
@@ -448,22 +448,21 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
                                 <option key={m} value={m}>{m}</option>
                               ))}
                             </select>
-                           )}
+                          )}
                           <div
-                            className={`px-3 py-1.5 text-[10px] font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-1.5 border ${
-                              connectionStatus === "success" 
-                                ? "bg-green-500/20 text-green-400 border-green-500/30"
-                                : connectionStatus === "error"
+                            className={`px-3 py-1.5 text-[10px] font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-1.5 border ${connectionStatus === "success"
+                              ? "bg-green-500/20 text-green-400 border-green-500/30"
+                              : connectionStatus === "error"
                                 ? "bg-red-500/20 text-red-400 border-red-500/30"
                                 : "bg-orange-500/20 text-orange-400 border-orange-500/30"
-                            }`}
+                              }`}
                           >
                             {connectionStatus === "success" ? (
-                               <CheckCircle2 size={12} />
+                              <CheckCircle2 size={12} />
                             ) : connectionStatus === "error" ? (
-                               <AlertCircle size={12} />
+                              <AlertCircle size={12} />
                             ) : (
-                               <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain opacity-50" />
+                              <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain opacity-50" />
                             )}
                             {connectionStatus === "success" ? "OLLAMA OK" : connectionStatus === "error" ? "OLLAMA OFFLINE" : "CHECKING..."}
                           </div>
@@ -471,37 +470,36 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
                           {/* CORS Helper Tooltip */}
                           {connectionStatus === "error" && (
                             <div className="absolute top-full right-0 mt-2 w-64 p-3 bg-slate-900 border border-red-500/50 rounded-xl shadow-2xl z-50 invisible group-hover:visible animate-in fade-in slide-in-from-top-1">
-                                <p className="text-[10px] text-red-200 leading-relaxed mb-2">
-                                    <span className="font-bold text-red-400">Connection Failed:</span> To use Ollama from this site, you must allow cross-origin requests on your laptop.
-                                </p>
-                                <div className="space-y-1.5">
-                                    <div className="text-[9px] bg-black/40 p-1.5 rounded font-mono text-slate-300 break-all">
-                                        $env:OLLAMA_ORIGINS="*"; ollama serve
-                                    </div>
-                                    <a 
-                                        href="https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-allow-additional-origins-to-access-ollama" 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="text-[9px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                                    >
-                                        View Setup Guide <ExternalLink size={10} />
-                                    </a>
+                              <p className="text-[10px] text-red-200 leading-relaxed mb-2">
+                                <span className="font-bold text-red-400">Connection Failed:</span> To use Ollama from this site, you must allow cross-origin requests on your laptop.
+                              </p>
+                              <div className="space-y-1.5">
+                                <div className="text-[9px] bg-black/40 p-1.5 rounded font-mono text-slate-300 break-all">
+                                  $env:OLLAMA_ORIGINS="*"; ollama serve
                                 </div>
+                                <a
+                                  href="https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-allow-additional-origins-to-access-ollama"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[9px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                                >
+                                  View Setup Guide <ExternalLink size={10} />
+                                </a>
+                              </div>
                             </div>
                           )}
                         </div>
                       )}
-                      
+
                       {/* Run Validation Button */}
                       <button
                         id="run-validation-btn"
                         onClick={handleValidate}
                         disabled={isEvaluating}
-                        className={`px-4 py-1.5 text-xs font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-2 focus:outline-none ${
-                          isEvaluating
-                            ? "bg-slate-600 text-slate-700 dark:text-slate-300 cursor-not-allowed"
-                            : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 hover:border-emerald-400"
-                        }`}
+                        className={`px-4 py-1.5 text-xs font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-2 focus:outline-none ${isEvaluating
+                          ? "bg-slate-600 text-slate-700 dark:text-slate-300 cursor-not-allowed"
+                          : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 hover:border-emerald-400"
+                          }`}
                       >
                         {isEvaluating ? (
                           <img
@@ -522,15 +520,15 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
                       defaultLanguage="javascript"
                       language={
                         language === "python3" ? "python" :
-                        language === "cpp" ? "cpp" :
-                        language === "c" ? "cpp" :
-                        language === "csharp" ? "csharp" :
-                        language === "java" ? "java" :
-                        language === "go" ? "go" :
-                        language === "rust" ? "rust" :
-                        language === "typescript" ? "typescript" :
-                        language === "javascript" ? "javascript" :
-                        language // fallback
+                          language === "cpp" ? "cpp" :
+                            language === "c" ? "cpp" :
+                              language === "csharp" ? "csharp" :
+                                language === "java" ? "java" :
+                                  language === "go" ? "go" :
+                                    language === "rust" ? "rust" :
+                                      language === "typescript" ? "typescript" :
+                                        language === "javascript" ? "javascript" :
+                                          language // fallback
                       }
                       theme="vs-dark"
                       value={code}
@@ -588,13 +586,12 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
                           submissionSuccess
                         }
                         className={`px-3 py-1 lg:px-5 lg:py-2 rounded-lg font-bold text-xs uppercase tracking-widest shadow flex items-center gap-2 transition-all whitespace-nowrap
-                            ${
-                              loading ||
-                              validationStatus !== "valid" ||
-                              submissionSuccess
-                                ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700"
-                                : "bg-emerald-500 hover:bg-emerald-400 text-slate-950 hover:-translate-y-0.5"
-                            }
+                            ${loading ||
+                            validationStatus !== "valid" ||
+                            submissionSuccess
+                            ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700"
+                            : "bg-emerald-500 hover:bg-emerald-400 text-slate-950 hover:-translate-y-0.5"
+                          }
                           `}
                       >
                         {loading ? (
