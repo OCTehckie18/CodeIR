@@ -1,6 +1,6 @@
 import { useState, useEffect, type ReactNode } from "react";
 import axios from "axios";
-const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
+import { apiUrl } from "../lib/apiConfig";
 import { supabase } from "../lib/supabaseClient";
 import { handleApiError } from "../lib/errorHandler";
 import {
@@ -128,7 +128,7 @@ export default function ReviewComments({
     try {
       const token = await getToken();
       const res = await axios.get(
-        `${baseUrl}/api/review-comments/${submissionId}`,
+        `${apiUrl}/review-comments/${submissionId}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (res.data.success) setComments(res.data.data);
@@ -147,7 +147,7 @@ export default function ReviewComments({
     try {
       const token = await getToken();
       const res = await axios.post(
-        `${baseUrl}/api/review-comments`,
+        `${apiUrl}/review-comments`,
         {
           submission_id: submissionId,
           instructor_id: instructorId,
@@ -192,7 +192,7 @@ export default function ReviewComments({
     try {
       const token = await getToken();
       const res = await axios.put(
-        `${baseUrl}/api/review-comments/${commentId}`,
+        `${apiUrl}/review-comments/${commentId}`,
         {
           comment_text: editText.trim(),
           comment_type: editType,
@@ -226,7 +226,7 @@ export default function ReviewComments({
     try {
       const token = await getToken();
       await axios.delete(
-        `${baseUrl}/api/review-comments/${commentId}`,
+        `${apiUrl}/review-comments/${commentId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },

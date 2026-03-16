@@ -6,6 +6,7 @@ import {
   BookOpen, GraduationCap, Layers,
 } from "lucide-react";
 import logo from "../assets/no-bg-white-logo.png";
+import { apiUrl } from "../lib/apiConfig";
 
 interface LandingPageProps {
   onGetStarted: (mode: "login" | "signup") => void;
@@ -234,12 +235,11 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
 
   useEffect(() => {
-    const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
-    fetch(`${baseUrl}/api/public/stats`)
+    fetch(`${apiUrl}/public/stats`)
       .then((r) => r.json())
       .then((d) => { if (d.success) setLiveStats(d.stats); })
       .catch(() => { });
-    fetch(`${baseUrl}/api/public/testimonials`)
+    fetch(`${apiUrl}/public/testimonials`)
       .then((r) => r.json())
       .then((d) => { if (d.success) setTestimonials(d.testimonials || []); })
       .catch(() => { });

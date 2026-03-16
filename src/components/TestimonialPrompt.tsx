@@ -3,7 +3,7 @@ import { Star, X, Send, Heart } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
 
-const API = `${import.meta.env.VITE_API_URL || "http://127.0.0.1:5000"}/api`;
+import { apiUrl as API } from "../lib/apiConfig";
 
 interface TestimonialPromptProps {
   userId: string;

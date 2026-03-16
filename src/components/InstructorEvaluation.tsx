@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
-const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
+import { apiUrl } from "../lib/apiConfig";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
 import { evaluateCode, autoGradeCode, checkOllamaConnection, getAvailableModels } from "../lib/aiService";
 import {
@@ -112,7 +112,7 @@ export default function InstructorEvaluation({
         // FETCH SPECIFIC SUBMISSION BASED ON ID
         try {
           const response = await axios.get(
-            `${baseUrl}/api/submissions/${submissionId}`,
+            `${apiUrl}/submissions/${submissionId}`,
             {
               headers: { Authorization: `Bearer ${session?.access_token}` },
             },
@@ -263,7 +263,7 @@ export default function InstructorEvaluation({
           validationStatus: "valid",
         };
         const subRes = await axios.post(
-          `${baseUrl}/api/submissions`,
+          `${apiUrl}/submissions`,
           subPayload,
           {
             headers: { Authorization: `Bearer ${session?.access_token}` },
@@ -287,7 +287,7 @@ export default function InstructorEvaluation({
       };
 
       const response = await axios.post(
-        `${baseUrl}/api/evaluations`,
+        `${apiUrl}/evaluations`,
         payload,
         {
           headers: { Authorization: `Bearer ${session?.access_token}` },

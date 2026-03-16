@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import NavBar from "./NavBar";
 import PageLoader from "./PageLoader";
-const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
+import { apiUrl } from "../lib/apiConfig";
 
 interface InstructorDashboardProps {
   onNavigate: (
@@ -60,7 +60,7 @@ export default function InstructorDashboard({
       setUser(session.user);
 
       const response = await axios.get(
-        `${baseUrl}/api/instructor/dashboard?_t=${Date.now()}`,
+        `${apiUrl}/instructor/dashboard?_t=${Date.now()}`,
         {
           headers: { Authorization: `Bearer ${session.access_token}` },
         },

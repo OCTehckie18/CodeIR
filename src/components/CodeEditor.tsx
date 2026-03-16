@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
-const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
+import { apiUrl } from "../lib/apiConfig";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
 import { evaluateCode, checkOllamaConnection, getAvailableModels } from "../lib/aiService";
 import {
@@ -81,7 +81,7 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [copiedIr, setCopiedIr] = useState(false);
   const [engine] = useState(localStorage.getItem("aiEngine") || "ollama");
-  const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
+  const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error" | "cors_error">("idle");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
 
@@ -89,8 +89,8 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
     let interval: ReturnType<typeof setInterval>;
 
     const checkConnection = async () => {
-      const isConnected = await checkOllamaConnection();
-      setConnectionStatus(isConnected ? "success" : "error");
+      const result = await checkOllamaConnection();
+      setConnectionStatus(result.status === "success" ? "success" : result.status === "cors_error" ? "cors_error" : "error");
     };
 
     const fetchModels = async () => {
@@ -144,8 +144,8 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
       try {
         const problemId = problem?.problem_id;
         const url = problemId
-          ? `${baseUrl}/api/drafts/${currentUser.id}?problemId=${problemId}`
-          : `${baseUrl}/api/drafts/${currentUser.id}`;
+          ? `${apiUrl}/drafts/${currentUser.id}?problemId=${problemId}`
+          : `${apiUrl}/drafts/${currentUser.id}`;
 
         const res = await axios.get(url, {
           headers: { Authorization: `Bearer ${session?.access_token}` },
@@ -207,7 +207,7 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
       };
 
       const response = await axios.post(
-        `${baseUrl}/api/submissions`,
+        `${apiUrl}/submissions`,
         payload,
         {
           headers: {
@@ -452,40 +452,55 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
                           <div
                             className={`px-3 py-1.5 text-[10px] font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-1.5 border ${connectionStatus === "success"
                               ? "bg-green-500/20 text-green-400 border-green-500/30"
-                              : connectionStatus === "error"
-                                ? "bg-red-500/20 text-red-400 border-red-500/30"
-                                : "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                              : connectionStatus === "cors_error"
+                                ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                                : connectionStatus === "error"
+                                  ? "bg-red-500/20 text-red-400 border-red-500/30"
+                                  : "bg-slate-500/20 text-slate-400 border-slate-500/30"
                               }`}
                           >
                             {connectionStatus === "success" ? (
                               <CheckCircle2 size={12} />
+                            ) : connectionStatus === "cors_error" ? (
+                              <AlertCircle size={12} />
                             ) : connectionStatus === "error" ? (
                               <AlertCircle size={12} />
                             ) : (
                               <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain opacity-50" />
                             )}
-                            {connectionStatus === "success" ? "OLLAMA OK" : connectionStatus === "error" ? "OLLAMA OFFLINE" : "CHECKING..."}
+                            {connectionStatus === "success" ? "OLLAMA OK" : connectionStatus === "cors_error" ? "CORS ERROR" : connectionStatus === "error" ? "OLLAMA OFFLINE" : "CHECKING..."}
                           </div>
 
-                          {/* CORS Helper Tooltip */}
-                          {connectionStatus === "error" && (
-                            <div className="absolute top-full right-0 mt-2 w-64 p-3 bg-slate-900 border border-red-500/50 rounded-xl shadow-2xl z-50 invisible group-hover:visible animate-in fade-in slide-in-from-top-1">
-                              <p className="text-[10px] text-red-200 leading-relaxed mb-2">
-                                <span className="font-bold text-red-400">Connection Failed:</span> To use Ollama from this site, you must allow cross-origin requests on your laptop.
-                              </p>
-                              <div className="space-y-1.5">
-                                <div className="text-[9px] bg-black/40 p-1.5 rounded font-mono text-slate-300 break-all">
-                                  $env:OLLAMA_ORIGINS="*"; ollama serve
-                                </div>
-                                <a
-                                  href="https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-allow-additional-origins-to-access-ollama"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[9px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                                >
-                                  View Setup Guide <ExternalLink size={10} />
-                                </a>
-                              </div>
+                          {/* CORS / Offline Helper Tooltip */}
+                          {(connectionStatus === "error" || connectionStatus === "cors_error") && (
+                            <div className="absolute top-full right-0 mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 invisible group-hover:visible animate-in fade-in slide-in-from-top-1">
+                              {connectionStatus === "cors_error" ? (
+                                <>
+                                  <p className="text-[10px] text-orange-200 leading-relaxed mb-2">
+                                    <span className="font-bold text-orange-400">Direct Connection Blocked:</span> Ollama is running, but browser security (CORS) is blocking direct access. <br/><br/>
+                                    <strong>Don't worry!</strong> We will automatically route your requests through our backend proxy.
+                                    <br/><br/>
+                                    To enable faster <strong>direct</strong> connections, restart Ollama with:
+                                  </p>
+                                  <div className="space-y-1.5">
+                                    <div className="text-[9px] bg-black/40 p-1.5 rounded font-mono text-slate-300 break-all select-all cursor-text mb-2 border border-slate-800">
+                                      $env:OLLAMA_ORIGINS="*" ; ollama serve
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <p className="text-[10px] text-red-200 leading-relaxed mb-2">
+                                  <span className="font-bold text-red-400">Ollama Offline:</span> We couldn't detect Ollama running on your machine. Please make sure the Ollama app is open and running on port 11434.
+                                </p>
+                              )}
+                              <a
+                                href="https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-allow-additional-origins-to-access-ollama"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[9px] text-blue-400 hover:text-blue-300 flex items-center gap-1 mt-1"
+                              >
+                                View Detailed Setup Guide <ExternalLink size={10} />
+                              </a>
                             </div>
                           )}
                         </div>
