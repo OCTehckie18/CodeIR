@@ -73,7 +73,7 @@ export async function evaluateCode(code: string, description: string, engine: st
     }
   }
 
-  // Gemini still uses proxy
+  // Gemini and HuggingFace use proxy
   const response = await axios.post(`${apiUrl}/evaluate-code`, {
     code,
     description,
@@ -114,7 +114,7 @@ Return EXACTLY a JSON string with no markdown blocks or extra text, in this form
     }
   }
 
-  // Gemini still uses proxy
+  // Gemini and HuggingFace use proxy
   const response = await axios.post(`${apiUrl}/auto-grade`, {
     code,
     description,

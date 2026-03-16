@@ -80,7 +80,10 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [copiedIr, setCopiedIr] = useState(false);
-  const [engine] = useState(localStorage.getItem("aiEngine") || "ollama");
+  const [engine] = useState(() => {
+    const saved = localStorage.getItem("aiEngine");
+    return saved && saved !== "" ? saved : "ollama";
+  });
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error" | "cors_error">("idle");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");

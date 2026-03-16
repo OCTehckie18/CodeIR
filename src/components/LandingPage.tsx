@@ -221,7 +221,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
   const typewritten = useTypewriter([
     "AI-Powered Code Evaluation",
     "Real-time Instructor Feedback",
-    "Ollama & Gemini 2.0 Integration",
+    "Ollama, Gemini & HuggingFace Integration",
     "Student Progress Tracking",
     "Intelligent Code Analysis",
   ]);
@@ -262,7 +262,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
 
   const s = liveStats;
   const c1 = useCounter(s?.totalSubmissions ?? 0, 2000, statsVisible);
-  const c2 = useCounter(s?.aiEngines ?? 2, 800, statsVisible);
+  const c2 = useCounter(s?.aiEngines ?? 3, 800, statsVisible);
   const c3 = useCounter(s?.evaluationMetrics ?? 3, 900, statsVisible);
   const c4 = useCounter(s?.totalEvaluations ?? 0, 1800, statsVisible);
 
@@ -275,7 +275,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
     },
     {
       icon: Brain, title: "AI-Powered Evaluation",
-      desc: "Dual AI engine (Ollama local + Gemini cloud) analyzes correctness, efficiency, and code style — giving nuanced, human-grade feedback.",
+      desc: "Triple AI engine (Ollama local, Gemini cloud, & Hugging Face) analyzes correctness, efficiency, and code style — giving nuanced, human-grade feedback.",
       color: "blue", gradient: "from-blue-500/20 to-indigo-500/10", border: "border-blue-500/20",
       glow: "rgba(59,130,246,0.15)", accent: "text-blue-400", bg: "bg-blue-500/10",
     },
@@ -360,7 +360,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-cyan-500/30 bg-cyan-500/5 text-cyan-400 text-xs font-bold uppercase tracking-widest mb-8 animate-fade-in">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-              Powered by Ollama & Gemini AI
+              Powered by Ollama, Gemini & Hugging Face AI
             </div>
 
             <h1 className="text-5xl xl:text-7xl font-black tracking-tight leading-[1.05] mb-6 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
@@ -513,19 +513,19 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="max-w-7xl mx-auto px-6">
           <div ref={aiSection.ref} className={`text-center mb-20 transition-all duration-700 ${aiSection.visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/[0.02] text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">
-              <Cpu size={12} className="text-blue-400" /> Dual AI Architecture
+              <Cpu size={12} className="text-blue-400" /> Triple AI Architecture
             </div>
             <h2 className="text-4xl xl:text-5xl font-black tracking-tight mb-5">
-              Two AI engines.
+              Three AI engines.
               <br />
               <span className="gradient-text-cyan-blue">One powerful platform.</span>
             </h2>
             <p className="text-slate-500 text-lg max-w-2xl mx-auto">
-              Choose between edge-local privacy with Ollama or scalable cloud intelligence with Gemini — switching requires zero code changes.
+              Choose between edge-local privacy with Ollama, cloud-scale power with Gemini, or open-source models via Hugging Face — switch with a single click.
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
+          <div className="grid lg:grid-cols-3 gap-8">
             {/* Ollama Card */}
             <div className={`relative rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/10 to-purple-500/5 p-8 overflow-hidden transition-all duration-700 ${aiSection.visible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-10"}`}>
               <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-indigo-500/10 blur-[80px]" />
@@ -594,6 +594,44 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                   </div>
                   <div className="flex gap-1 mt-3">
                     {[0, 1, 2].map(d => <div key={d} className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: `${d * 0.2}s` }} />)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Hugging Face Card */}
+            <div className={`relative rounded-3xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-8 overflow-hidden transition-all duration-700 ${aiSection.visible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-10"}`} style={{ transitionDelay: "300ms" }}>
+              <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-amber-500/10 blur-[80px]" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 bg-amber-500/20 border border-amber-500/30 rounded-2xl flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
+                      <text x="1" y="19" fontSize="18" fill="#f59e0b">🤗</text>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-white">Hugging Face</h3>
+                    <p className="text-amber-400 text-sm font-semibold">Cloud AI · Open Source Models</p>
+                  </div>
+                  <span className="ml-auto px-3 py-1 rounded-full text-xs font-bold border border-amber-500/30 bg-amber-500/10 text-amber-400">Cloud</span>
+                </div>
+                <div className="space-y-3 mb-6">
+                  {["Qwen2.5-Coder-7B-Instruct model", "Free-tier cloud inference", "No local hardware required", "Open source & transparent", "Specialized code understanding"].map((f, i) => (
+                    <div key={i} className="flex items-center gap-3 text-sm text-slate-400">
+                      <CheckCircle size={14} className="text-amber-400 shrink-0" />
+                      {f}
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-[#0d1117] rounded-xl p-4 border border-white/5 font-mono text-xs">
+                  <div className="text-amber-400 mb-2">{">"}  Requesting HuggingFace inference...</div>
+                  <div className="text-slate-500 space-y-1">
+                    <div>→ Model: <span className="text-amber-300">Qwen2.5-Coder-7B</span></div>
+                    <div>→ Analyzing student submission...</div>
+                    <div className="text-emerald-400">✓ Done. Feedback generated.</div>
+                  </div>
+                  <div className="flex gap-1 mt-3">
+                    {[0, 1, 2].map(d => <div key={d} className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: `${d * 0.2}s` }} />)}
                   </div>
                 </div>
               </div>
@@ -796,7 +834,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
       <div className="py-10 border-y border-white/5 overflow-hidden bg-white/[0.01]">
         <div className="flex gap-12 animate-[slide-in-right_0s] whitespace-nowrap" style={{ animation: "none" }}>
           <div className="flex gap-12 items-center" style={{ animation: "marquee 20s linear infinite" }}>
-            {["Python", "JavaScript", "TypeScript", "Java", "C++", "Go", "Rust", "Ruby", "Supabase", "Flask", "React", "Ollama", "Gemini API", "Monaco Editor"].map((tech) => (
+            {["Python", "JavaScript", "TypeScript", "Java", "C++", "Go", "Rust", "Ruby", "Supabase", "React", "Ollama", "Gemini API", "Hugging Face", "Monaco Editor", "Qwen2.5-Coder"].map((tech) => (
               <span key={tech} className="text-slate-600 text-sm font-semibold uppercase tracking-widest hover:text-slate-400 transition-colors shrink-0">{tech}</span>
             ))}
           </div>
@@ -841,7 +879,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               color: "cyan",
               points: [
                 "Engineered the core evaluation pipeline",
-                "Integrated dual Ollama & Gemini AI systems",
+                "Integrated triple Ollama, Gemini & HuggingFace AI",
                 "Built the Monaco-powered intelligent code editor"
               ],
               github: "https://github.com/OCTehckie18",
@@ -938,7 +976,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           </div>
           {/* Feature checks below CTA */}
           <div className="flex flex-wrap justify-center gap-6 mt-12 text-sm text-slate-500">
-            {["No credit card required", "Works offline with Ollama", "Student & Instructor roles", "Real-time AI feedback"].map((item) => (
+            {["No credit card required", "Works offline with Ollama", "Cloud AI via Gemini & HuggingFace", "Student & Instructor roles", "Real-time AI feedback"].map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <CheckCircle size={14} className="text-emerald-400" />
                 {item}
@@ -963,7 +1001,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-700">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
-            Built with React · Supabase · Flask · Ollama · Gemini
+            Built with React · Supabase · Ollama · Gemini · Hugging Face
           </div>
         </div>
       </footer>

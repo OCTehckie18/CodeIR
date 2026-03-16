@@ -64,7 +64,10 @@ export default function InstructorEvaluation({
   const [activeBottomTab, setActiveBottomTab] = useState<
     "feedback" | "comments"
   >("feedback");
-  const [currentEngine, setCurrentEngine] = useState<string>(localStorage.getItem("aiEngine") || "ollama");
+  const [currentEngine, setCurrentEngine] = useState<string>(() => {
+    const saved = localStorage.getItem("aiEngine");
+    return saved && saved !== "" ? saved : "ollama";
+  });
   const [copiedIr, setCopiedIr] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
@@ -170,7 +173,8 @@ export default function InstructorEvaluation({
       const description =
         submission?.problems?.problem_statement ||
         "Instructor evaluating manual code via dashboard.";
-      const engine = localStorage.getItem("aiEngine") || "ollama";
+      const savedEngine = localStorage.getItem("aiEngine");
+      const engine = savedEngine && savedEngine !== "" ? savedEngine : "ollama";
       setCurrentEngine(engine);
       
       const result = await autoGradeCode(code, description, engine, selectedModel);
@@ -200,7 +204,8 @@ export default function InstructorEvaluation({
     try {
       const description =
         submission?.problems?.problem_statement || "Evaluate this code.";
-      const engine = localStorage.getItem("aiEngine") || "ollama";
+      const savedEngine = localStorage.getItem("aiEngine");
+      const engine = savedEngine && savedEngine !== "" ? savedEngine : "ollama";
       setCurrentEngine(engine);
       
       const result = await evaluateCode(code, description, engine, selectedModel);
@@ -491,9 +496,25 @@ export default function InstructorEvaluation({
                   {copiedIr ? <Check size={14} /> : <Copy size={14} />}
                 </button>
                 <div className="h-4 w-px bg-yellow-500/20 mx-1"></div>
-                <div className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${currentEngine === 'ollama' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'}`}>
-                  {currentEngine}
-                </div>
+                <select
+                  className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest outline-none cursor-pointer transition-all ${
+                    currentEngine === "ollama"
+                      ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                      : currentEngine === "huggingface"
+                      ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                      : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                  }`}
+                  value={currentEngine}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCurrentEngine(val);
+                    localStorage.setItem("aiEngine", val);
+                  }}
+                >
+                  <option value="ollama" className="bg-[#0f172a]">Ollama</option>
+                  <option value="huggingface" className="bg-[#0f172a]">Hugging Face</option>
+                  <option value="gemini" className="bg-[#0f172a]">Gemini</option>
+                </select>
               </div>
             </div>
             <div className="flex-1 pt-2">

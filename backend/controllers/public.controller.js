@@ -84,7 +84,7 @@ exports.getPublicStats = async (req, res) => {
                 avgCorrectness,
                 avgEfficiency,
                 avgStyle,
-                aiEngines: 2, // Ollama + Gemini — static fact
+                aiEngines: 3, // Ollama + Gemini + Hugging Face — static fact
                 evaluationMetrics: 3, // Correctness, Efficiency, Style — static fact
             },
         });
