@@ -17,6 +17,8 @@ import {
   CheckCircle2,
   Zap,
   Palette,
+  AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 
 import {
@@ -347,7 +349,7 @@ export default function InstructorEvaluation({
               </span>
               <div className="flex items-center gap-2">
                 {currentEngine === "ollama" && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 group relative">
                     {availableModels.length > 0 && (
                       <select
                         className="bg-slate-50 dark:bg-slate-950 text-[9px] text-blue-200 border border-blue-500/30 rounded px-2 py-0.5 outline-none hover:bg-slate-900 transition-colors cursor-pointer"
@@ -372,12 +374,34 @@ export default function InstructorEvaluation({
                       {connectionStatus === "success" ? (
                          <CheckCircle2 size={10} />
                       ) : connectionStatus === "error" ? (
-                         <Zap size={10} />
+                         <AlertCircle size={10} />
                       ) : (
                          <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain opacity-50" />
                       )}
                       {connectionStatus === "success" ? "Ollama OK" : connectionStatus === "error" ? "Ollama Offline" : "Checking..."}
                     </div>
+
+                    {/* CORS Helper Tooltip */}
+                    {connectionStatus === "error" && (
+                      <div className="absolute top-full right-0 mt-2 w-64 p-3 bg-slate-900 border border-red-500/50 rounded-xl shadow-2xl z-50 invisible group-hover:visible animate-in fade-in slide-in-from-top-1">
+                          <p className="text-[10px] text-red-200 leading-relaxed mb-2">
+                              <span className="font-bold text-red-400">Connection Failed:</span> Please allow cross-origin requests on your laptop to use local AI.
+                          </p>
+                          <div className="space-y-1.5">
+                              <div className="text-[9px] bg-black/40 p-1.5 rounded font-mono text-slate-300 break-all">
+                                  $env:OLLAMA_ORIGINS="*"; ollama serve
+                              </div>
+                              <a 
+                                  href="https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-allow-additional-origins-to-access-ollama" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-[9px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                              >
+                                  View Setup Guide <ExternalLink size={10} />
+                              </a>
+                          </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 <button
