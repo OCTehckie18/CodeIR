@@ -126,6 +126,11 @@ exports.deleteReviewComment = async (req, res) => {
 
 exports.checkAIStatus = async (req, res) => {
     try {
+        // Disable caching to ensure fresh status every time (prevents 304 Not Modified)
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        
         const isConnected = await checkOllamaStatus();
         res.status(200).json({ success: true, connected: isConnected });
     } catch (error) {
