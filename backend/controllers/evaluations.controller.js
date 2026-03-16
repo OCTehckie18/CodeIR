@@ -1,4 +1,4 @@
-const { supabase, createAuthClient, generateAIContent } = require("../config");
+const { supabase, createAuthClient, generateAIContent, checkOllamaStatus } = require("../config");
 
 exports.evaluateCode = async (req, res) => {
     const { code, description, engine = "ollama" } = req.body;
@@ -121,5 +121,14 @@ exports.deleteReviewComment = async (req, res) => {
         res.status(200).json({ success: true, message: "Comment deleted." });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+exports.checkAIStatus = async (req, res) => {
+    try {
+        const isConnected = await checkOllamaStatus();
+        res.status(200).json({ success: true, connected: isConnected });
+    } catch (error) {
+        res.status(200).json({ success: true, connected: false });
     }
 };

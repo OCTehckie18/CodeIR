@@ -12,4 +12,7 @@ router.get("/review-comments/:submissionId", evaluationsController.getReviewComm
 router.put("/review-comments/:commentId", evaluationsController.updateReviewComment);
 router.delete("/review-comments/:commentId", evaluationsController.deleteReviewComment);
 
+// AI Status Proxy
+router.get("/ai/status", evaluationsController.checkAIStatus);
+
 module.exports = router;

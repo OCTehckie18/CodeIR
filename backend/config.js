@@ -60,8 +60,18 @@ async function generateAIContent(engine, prompt) {
     }
 }
 
+async function checkOllamaStatus() {
+    try {
+        const res = await axios.get("http://127.0.0.1:11434/api/tags", { timeout: 3000 });
+        return res.status === 200;
+    } catch (error) {
+        return false;
+    }
+}
+
 module.exports = {
     supabase,
     createAuthClient,
-    generateAIContent
+    generateAIContent,
+    checkOllamaStatus
 };
