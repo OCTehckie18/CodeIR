@@ -1,6 +1,7 @@
 const { supabase, createAuthClient, generateAIContent, checkOllamaStatus, getOllamaModels } = require("../config");
 
 exports.evaluateCode = async (req, res) => {
+    console.log("[EVAL] evaluateCode received:", req.body);
     const { code, description, engine = "ollama", model = "qwen2.5-coder:7b" } = req.body;
     if (!code || !description) return res.status(400).json({ success: false, error: "Code and description are required." });
     try {
@@ -20,7 +21,13 @@ exports.evaluateCode = async (req, res) => {
             res.status(200).json({ success: true, status: "invalid", feedback });
         }
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error(`[EVAL ERROR] Engine: ${engine}`, error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message,
+            detectedEngine: engine,
+            normalizedEngine: (engine || "").toString().toLowerCase().trim().replace(/[\s-_]+/g, "")
+        });
     }
 };
 
@@ -43,6 +50,7 @@ exports.upsertEvaluation = async (req, res) => {
 };
 
 exports.autoGrade = async (req, res) => {
+    console.log("[EVAL] autoGrade received:", req.body);
     try {
         const { code, description, engine = "ollama", model = "qwen2.5-coder:7b" } = req.body;
         if (!code) return res.status(400).json({ success: false, error: "Code is required for auto-grading." });
@@ -63,7 +71,13 @@ Return EXACTLY a JSON string with no markdown blocks or extra text, in this form
         const parsed = JSON.parse(text.trim());
         res.status(200).json({ success: true, data: parsed });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error(`[AUTOGRADE ERROR] Engine: ${engine}`, error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message,
+            detectedEngine: engine,
+            normalizedEngine: (engine || "").toString().toLowerCase().trim().replace(/[\s-_]+/g, "")
+        });
     }
 };
 

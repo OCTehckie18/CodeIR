@@ -254,8 +254,9 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
     setSubmissionSuccess(false);
 
     try {
-      const engine = localStorage.getItem("aiEngine") || "ollama";
-      const result = await evaluateCode(code, description, engine, selectedModel);
+      // Re-fetch engine just in case it was changed without a refresh
+      const currentEngine = localStorage.getItem("aiEngine") || "ollama";
+      const result = await evaluateCode(code, description, currentEngine, selectedModel);
 
       const {
         success,
@@ -438,6 +439,12 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
+                      {/* Active Engine Indicator */}
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 border border-white/10 text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                        {localStorage.getItem("aiEngine") || "ollama"}
+                      </div>
+                      <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
                       {engine === "ollama" && (
                         <div className="flex items-center gap-2 group relative">
                           {availableModels.length > 0 && (

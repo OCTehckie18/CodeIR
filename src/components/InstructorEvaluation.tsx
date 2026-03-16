@@ -77,8 +77,8 @@ export default function InstructorEvaluation({
     let interval: ReturnType<typeof setInterval>;
     
     const checkConnection = async () => {
-      const isConnected = await checkOllamaConnection();
-      setConnectionStatus(isConnected ? "success" : "error");
+      const result = await checkOllamaConnection();
+      setConnectionStatus(result.connected ? "success" : "error");
     };
 
     const fetchModels = async () => {
@@ -173,11 +173,8 @@ export default function InstructorEvaluation({
       const description =
         submission?.problems?.problem_statement ||
         "Instructor evaluating manual code via dashboard.";
-      const savedEngine = localStorage.getItem("aiEngine");
-      const engine = savedEngine && savedEngine !== "" ? savedEngine : "ollama";
-      setCurrentEngine(engine);
       
-      const result = await autoGradeCode(code, description, engine, selectedModel);
+      const result = await autoGradeCode(code, description, currentEngine, selectedModel);
 
       if (result.success && result.data) {
         setScores({
@@ -204,11 +201,8 @@ export default function InstructorEvaluation({
     try {
       const description =
         submission?.problems?.problem_statement || "Evaluate this code.";
-      const savedEngine = localStorage.getItem("aiEngine");
-      const engine = savedEngine && savedEngine !== "" ? savedEngine : "ollama";
-      setCurrentEngine(engine);
       
-      const result = await evaluateCode(code, description, engine, selectedModel);
+      const result = await evaluateCode(code, description, currentEngine, selectedModel);
 
       if (result.success) {
         if (result.status === "valid") {
@@ -500,7 +494,7 @@ export default function InstructorEvaluation({
                   className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest outline-none cursor-pointer transition-all ${
                     currentEngine === "ollama"
                       ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                      : currentEngine === "huggingface"
+                      : currentEngine === "groq"
                       ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
                       : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                   }`}
@@ -512,7 +506,7 @@ export default function InstructorEvaluation({
                   }}
                 >
                   <option value="ollama" className="bg-[#0f172a]">Ollama</option>
-                  <option value="huggingface" className="bg-[#0f172a]">Hugging Face</option>
+                  <option value="groq" className="bg-[#0f172a]">Groq</option>
                   <option value="gemini" className="bg-[#0f172a]">Gemini</option>
                 </select>
               </div>

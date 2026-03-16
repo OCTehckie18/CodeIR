@@ -1,7 +1,7 @@
 require("dotenv").config();
 const { createClient } = require("@supabase/supabase-js");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const axios = require("axios");
+const Groq = require("groq-sdk");
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -25,10 +25,21 @@ const createAuthClient = (req) => {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
+// Initialize Groq Client
+const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+
+const axios = require("axios");
+
 // Helper to switch engines transparently
 async function generateAIContent(engine, prompt, modelName = "qwen2.5-coder:7b") {
-    const activeEngine = (engine || "ollama").toLowerCase().trim();
-    console.log(`[AI Content Gen] Requested Engine: ${activeEngine}, Model: ${modelName}`);
+    const rawEngine = (engine || "ollama").toString().toLowerCase().trim();
+    // Normalize: remove spaces, dashes, underscores to handle "Hugging Face", "hugging-face", etc.
+    const activeEngine = rawEngine.replace(/[\s-_]+/g, "");
+    
+    console.log(`[AI Content Gen] === REQUEST START ===`);
+    console.log(`[AI Content Gen] Engine string received: "${engine}"`);
+    console.log(`[AI Content Gen] Normalized Engine: "${activeEngine}" (raw: "${rawEngine}"), Model: "${modelName}"`);
 
     if (activeEngine === "ollama") {
         try {
@@ -53,59 +64,43 @@ async function generateAIContent(engine, prompt, modelName = "qwen2.5-coder:7b")
             console.error("Ollama Error:", errorMsg);
 
             if (error.code === 'ECONNABORTED') {
-                throw new Error("Ollama request timed out. The 7B model might be slow on your CPU.");
+                throw new Error(`Ollama request timed out (7B model on CPU).`);
             }
-            throw new Error(`Ollama Error: ${errorMsg}`);
+            throw new Error(`Backend Error (Ollama Path): ${errorMsg}`);
         }
-    } else if (activeEngine === "huggingface") {
+    } else if (activeEngine === "groq" || activeEngine === "huggingface") {
         try {
-            console.log(`[HuggingFace] Sending request via HF Router (OpenAI-compatible)...`);
-            const hfModel = "Qwen/Qwen2.5-Coder-7B-Instruct";
-            const response = await axios.post(
-                "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-7B-Instruct/v1/chat/completions",
-                {
-                    model: hfModel,
-                    messages: [
-                        {
-                            role: "user",
-                            content: prompt
-                        }
-                    ],
-                    max_tokens: 1500,
-                    temperature: 0.3,
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${process.env.HF_TOKEN || process.env.HF_KEY}`,
-                        "Content-Type": "application/json",
-                    },
-                    timeout: 90000,
-                }
-            );
+            console.log(`[Groq/HF] Sending request to ${GROQ_MODEL}...`);
+            const chatCompletion = await groqClient.chat.completions.create({
+                model: GROQ_MODEL,
+                messages: [{ role: "user", content: prompt }],
+                max_tokens: 1500,
+                temperature: 0.3,
+            });
 
-            const result = response.data?.choices?.[0]?.message?.content;
-
+            const result = chatCompletion.choices?.[0]?.message?.content;
             if (!result) {
-                console.error("[HuggingFace] Empty response:", JSON.stringify(response.data));
-                throw new Error("Hugging Face returned an empty response.");
+                console.error("[Groq] Empty response:", JSON.stringify(chatCompletion));
+                throw new Error("Groq returned an empty response.");
             }
 
-            console.log(`[HuggingFace] Generation successful (${result.length} chars)`);
+            console.log(`[Groq] Generation successful (${result.length} chars)`);
             return result;
         } catch (error) {
-            const errorMsg = error.response
-                ? `Status: ${error.response.status} - ${JSON.stringify(error.response.data)}`
+            const errorMsg = error.error
+                ? `Status: ${error.status} - ${JSON.stringify(error.error)}`
                 : error.message;
-            console.error("Hugging Face Error:", errorMsg);
-            throw new Error(`Hugging Face Error: ${errorMsg}`);
+            console.error("Groq Error:", errorMsg);
+            throw new Error(`Groq Error: ${errorMsg}`);
         }
     } else if (activeEngine === "gemini") {
         console.log(`[Gemini] Sending request to gemini-2.0-flash...`);
         const result = await geminiModel.generateContent(prompt);
         return result.response.text();
     } else {
-        console.warn(`[AI Content Gen] Unknown engine "${activeEngine}", falling back to Ollama.`);
-        return await generateAIContent("ollama", prompt, modelName);
+        const msg = `Unknown engine "${activeEngine}" (original: "${engine}"). Supported: ollama, groq, gemini.`;
+        console.warn(`[AI Content Gen] ${msg}`);
+        throw new Error(msg);
     }
 }
 

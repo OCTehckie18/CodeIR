@@ -30,7 +30,8 @@ export async function getAvailableModels(): Promise<string[]> {
   }
 }
 
-export async function evaluateCode(code: string, description: string, engine: string, model?: string) {
+export async function evaluateCode(code: string, description: string, engineInput: string, model?: string) {
+  const engine = (engineInput || "ollama").toLowerCase().trim();
   if (engine === "ollama") {
     try {
       // Direct call for Ollama
@@ -73,7 +74,7 @@ export async function evaluateCode(code: string, description: string, engine: st
     }
   }
 
-  // Gemini and HuggingFace use proxy
+  // Gemini and Groq use proxy
   const response = await axios.post(`${apiUrl}/evaluate-code`, {
     code,
     description,
@@ -83,7 +84,8 @@ export async function evaluateCode(code: string, description: string, engine: st
   return response.data;
 }
 
-export async function autoGradeCode(code: string, description: string, engine: string, model?: string) {
+export async function autoGradeCode(code: string, description: string, engineInput: string, model?: string) {
+  const engine = (engineInput || "ollama").toLowerCase().trim();
   if (engine === "ollama") {
     try {
       // Direct call for Ollama
@@ -114,7 +116,7 @@ Return EXACTLY a JSON string with no markdown blocks or extra text, in this form
     }
   }
 
-  // Gemini and HuggingFace use proxy
+  // Gemini and Groq use proxy
   const response = await axios.post(`${apiUrl}/auto-grade`, {
     code,
     description,

@@ -221,7 +221,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
   const typewritten = useTypewriter([
     "AI-Powered Code Evaluation",
     "Real-time Instructor Feedback",
-    "Ollama, Gemini & HuggingFace Integration",
+    "Ollama, Gemini & Groq Integration",
     "Student Progress Tracking",
     "Intelligent Code Analysis",
   ]);
@@ -275,7 +275,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
     },
     {
       icon: Brain, title: "AI-Powered Evaluation",
-      desc: "Triple AI engine (Ollama local, Gemini cloud, & Hugging Face) analyzes correctness, efficiency, and code style — giving nuanced, human-grade feedback.",
+      desc: "Triple AI engine (Ollama local, Gemini cloud, & Groq ultra-fast) analyzes correctness, efficiency, and code style — giving nuanced, human-grade feedback.",
       color: "blue", gradient: "from-blue-500/20 to-indigo-500/10", border: "border-blue-500/20",
       glow: "rgba(59,130,246,0.15)", accent: "text-blue-400", bg: "bg-blue-500/10",
     },
@@ -360,7 +360,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-cyan-500/30 bg-cyan-500/5 text-cyan-400 text-xs font-bold uppercase tracking-widest mb-8 animate-fade-in">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-              Powered by Ollama, Gemini & Hugging Face AI
+              Powered by Ollama, Gemini & Groq AI
             </div>
 
             <h1 className="text-5xl xl:text-7xl font-black tracking-tight leading-[1.05] mb-6 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
@@ -521,7 +521,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               <span className="gradient-text-cyan-blue">One powerful platform.</span>
             </h2>
             <p className="text-slate-500 text-lg max-w-2xl mx-auto">
-              Choose between edge-local privacy with Ollama, cloud-scale power with Gemini, or open-source models via Hugging Face — switch with a single click.
+              Choose between edge-local privacy with Ollama, cloud-scale power with Gemini, or ultra-fast open-source models via Groq — switch with a single click.
             </p>
           </div>
 
@@ -599,24 +599,22 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               </div>
             </div>
 
-            {/* Hugging Face Card */}
+            {/* Groq Card */}
             <div className={`relative rounded-3xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-8 overflow-hidden transition-all duration-700 ${aiSection.visible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-10"}`} style={{ transitionDelay: "300ms" }}>
               <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-amber-500/10 blur-[80px]" />
               <div className="relative z-10">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-14 h-14 bg-amber-500/20 border border-amber-500/30 rounded-2xl flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
-                      <text x="1" y="19" fontSize="18" fill="#f59e0b">🤗</text>
-                    </svg>
+                    <Zap size={28} className="text-amber-400" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-white">Hugging Face</h3>
-                    <p className="text-amber-400 text-sm font-semibold">Cloud AI · Open Source Models</p>
+                    <h3 className="text-2xl font-black text-white">Groq</h3>
+                    <p className="text-amber-400 text-sm font-semibold">Cloud AI · Lightning Fast LPU</p>
                   </div>
                   <span className="ml-auto px-3 py-1 rounded-full text-xs font-bold border border-amber-500/30 bg-amber-500/10 text-amber-400">Cloud</span>
                 </div>
                 <div className="space-y-3 mb-6">
-                  {["Qwen2.5-Coder-7B-Instruct model", "Free-tier cloud inference", "No local hardware required", "Open source & transparent", "Specialized code understanding"].map((f, i) => (
+                  {["Llama 3.3 70B Versatile model", "Free-tier ultra-fast LPU inference", "Instantaneous response times", "Open source Llama 3 models", "Specialized code generation"].map((f, i) => (
                     <div key={i} className="flex items-center gap-3 text-sm text-slate-400">
                       <CheckCircle size={14} className="text-amber-400 shrink-0" />
                       {f}
@@ -624,11 +622,11 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                   ))}
                 </div>
                 <div className="bg-[#0d1117] rounded-xl p-4 border border-white/5 font-mono text-xs">
-                  <div className="text-amber-400 mb-2">{">"}  Requesting HuggingFace inference...</div>
+                  <div className="text-amber-400 mb-2">{">"}  Requesting Groq inference...</div>
                   <div className="text-slate-500 space-y-1">
-                    <div>→ Model: <span className="text-amber-300">Qwen2.5-Coder-7B</span></div>
+                    <div>→ Model: <span className="text-amber-300">llama-3.3-70b-versatile</span></div>
                     <div>→ Analyzing student submission...</div>
-                    <div className="text-emerald-400">✓ Done. Feedback generated.</div>
+                    <div className="text-emerald-400">✓ Done in 0.12s. Feedback generated.</div>
                   </div>
                   <div className="flex gap-1 mt-3">
                     {[0, 1, 2].map(d => <div key={d} className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: `${d * 0.2}s` }} />)}
@@ -834,7 +832,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
       <div className="py-10 border-y border-white/5 overflow-hidden bg-white/[0.01]">
         <div className="flex gap-12 animate-[slide-in-right_0s] whitespace-nowrap" style={{ animation: "none" }}>
           <div className="flex gap-12 items-center" style={{ animation: "marquee 20s linear infinite" }}>
-            {["Python", "JavaScript", "TypeScript", "Java", "C++", "Go", "Rust", "Ruby", "Supabase", "React", "Ollama", "Gemini API", "Hugging Face", "Monaco Editor", "Qwen2.5-Coder"].map((tech) => (
+            {["Python", "JavaScript", "TypeScript", "Java", "C++", "Go", "Rust", "Ruby", "Supabase", "React", "Ollama", "Gemini API", "Groq API", "Monaco Editor", "Qwen2.5-Coder"].map((tech) => (
               <span key={tech} className="text-slate-600 text-sm font-semibold uppercase tracking-widest hover:text-slate-400 transition-colors shrink-0">{tech}</span>
             ))}
           </div>
@@ -879,7 +877,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               color: "cyan",
               points: [
                 "Engineered the core evaluation pipeline",
-                "Integrated triple Ollama, Gemini & HuggingFace AI",
+                "Integrated triple Ollama, Gemini & Groq AI",
                 "Built the Monaco-powered intelligent code editor"
               ],
               github: "https://github.com/OCTehckie18",
@@ -976,7 +974,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           </div>
           {/* Feature checks below CTA */}
           <div className="flex flex-wrap justify-center gap-6 mt-12 text-sm text-slate-500">
-            {["No credit card required", "Works offline with Ollama", "Cloud AI via Gemini & HuggingFace", "Student & Instructor roles", "Real-time AI feedback"].map((item) => (
+            {["No credit card required", "Works offline with Ollama", "Cloud AI via Gemini & Groq", "Student & Instructor roles", "Real-time AI feedback"].map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <CheckCircle size={14} className="text-emerald-400" />
                 {item}
@@ -1001,7 +999,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-700">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
-            Built with React · Supabase · Ollama · Gemini · Hugging Face
+            Built with React · Supabase · Ollama · Gemini · Groq
           </div>
         </div>
       </footer>
