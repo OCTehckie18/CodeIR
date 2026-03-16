@@ -224,7 +224,7 @@ export default function AuthForm({ initialMode = "login" }: { initialMode?: "log
             {
               Icon: Settings,
               title: "Multi-Model AI",
-              desc: "Powered by edge-local Ollama, cloud Gemini API, and Hugging Face open-source models.",
+              desc: "Powered by edge-local Ollama, cloud Gemini API, and Groq cloud models.",
             },
             {
               Icon: Atom,
