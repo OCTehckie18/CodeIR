@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
-import ThemeToggle from "./ThemeToggle";
+// import ThemeToggle from "./ThemeToggle";
 import {
   LayoutDashboard,
   BookOpen,
@@ -90,7 +90,7 @@ export default function NavBar({
         </nav>
 
         <div className="flex items-center gap-4">
-          <ThemeToggle />
+          {/* <ThemeToggle /> */}
           <div className="text-right hidden sm:block">
             <p className="text-xs text-slate-600 dark:text-slate-400">
               Student Account
@@ -155,7 +155,7 @@ export default function NavBar({
       </nav>
 
       <div className="flex items-center gap-4">
-        <ThemeToggle />
+        {/* <ThemeToggle /> */}
         <div className="text-right hidden sm:block">
           <p className="text-xs text-slate-600 dark:text-slate-400">
             Instructor Account
