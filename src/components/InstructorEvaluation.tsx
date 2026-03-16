@@ -72,6 +72,7 @@ export default function InstructorEvaluation({
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"structured" | "raw">("structured");
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -250,6 +251,81 @@ export default function InstructorEvaluation({
       );
     } finally {
       setIsValidating(false);
+    }
+  };
+
+  // --- Helper to Render IR Content ---
+  const RenderStructuredContent = () => {
+    try {
+      const data = JSON.parse(irView);
+      const isError = data.status?.toLowerCase().includes("error");
+      const isFailed = data.status?.toLowerCase().includes("failed");
+      const isWaiting = data.status?.toLowerCase().includes("wait") || data.status?.toLowerCase().includes("no ir");
+
+      return (
+        <div className="p-4 space-y-4 h-full overflow-y-auto custom-scrollbar">
+          <div className={`p-4 rounded-xl border flex items-start gap-4 transition-all ${
+            isError ? "bg-red-500/10 border-red-500/20 text-red-200" :
+            isFailed ? "bg-orange-500/10 border-orange-500/20 text-orange-200" :
+            isWaiting ? "bg-blue-500/10 border-blue-500/20 text-blue-200 animate-pulse" :
+            "bg-emerald-500/10 border-emerald-500/20 text-emerald-200"
+          }`}>
+            <div className="mt-1">
+              {isError ? <AlertCircle size={20} /> :
+               isFailed ? <Palette size={20} /> :
+               isWaiting ? <Sparkles size={20} /> :
+               <CheckCircle2 size={20} />}
+            </div>
+            <div>
+              <h4 className="font-bold text-sm uppercase tracking-wider mb-1">
+                {data.status || "Status Unknown"}
+              </h4>
+              <p className="text-xs opacity-80 leading-relaxed">
+                {data.error || (isWaiting ? "Please use the Validate button to analyze the student code." : "Validation process completed.")}
+              </p>
+            </div>
+          </div>
+
+          {data.feedback && (
+            <div className="bg-slate-900/50 rounded-xl border border-white/5 p-5">
+              <h5 className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-500 mb-4 flex items-center gap-2">
+                <MessageSquare size={12} /> AI Insight & Feedback
+              </h5>
+              {Array.isArray(data.feedback) ? (
+                <ul className="space-y-3">
+                  {data.feedback.map((point: string, idx: number) => (
+                    <li key={idx} className="flex gap-3 text-xs text-slate-300 leading-relaxed group">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500 group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-colors">
+                        {idx + 1}
+                      </span>
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-slate-300 leading-relaxed italic">
+                  "{data.feedback}"
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    } catch (e) {
+      // It's probably raw pseudocode
+      return (
+        <div className="p-6 h-full overflow-y-auto custom-scrollbar">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] uppercase font-black tracking-widest text-emerald-500">
+              High-Level Pseudocode
+            </span>
+          </div>
+          <div className="bg-slate-950/50 p-6 rounded-2xl border border-white/5 font-mono text-sm leading-8 text-blue-100/90 whitespace-pre-wrap selection:bg-blue-500/30">
+            {irView}
+          </div>
+        </div>
+      );
     }
   };
 
@@ -511,6 +587,30 @@ export default function InstructorEvaluation({
                   {copiedIr ? <Check size={14} /> : <Copy size={14} />}
                 </button>
                 <div className="h-4 w-px bg-yellow-500/20 mx-1"></div>
+                
+                <div className="flex bg-slate-900/50 p-1 rounded-lg border border-white/5 gap-1 mr-2">
+                  <button
+                    onClick={() => setViewMode("structured")}
+                    className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all flex items-center gap-1.5 ${
+                      viewMode === "structured" 
+                        ? "bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20" 
+                        : "text-slate-500 hover:text-slate-300"
+                    }`}
+                  >
+                    <Palette size={10} /> Visual
+                  </button>
+                  <button
+                    onClick={() => setViewMode("raw")}
+                    className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all flex items-center gap-1.5 ${
+                      viewMode === "raw" 
+                        ? "bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20" 
+                        : "text-slate-500 hover:text-slate-300"
+                    }`}
+                  >
+                    <CodeIcon size={10} /> Raw
+                  </button>
+                </div>
+
                 <select
                   className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest outline-none cursor-pointer transition-all ${
                     currentEngine === "ollama"
@@ -532,28 +632,32 @@ export default function InstructorEvaluation({
                 </select>
               </div>
             </div>
-            <div className="flex-1 pt-2">
-              <Editor
-                height="100%"
-                defaultLanguage="json"
-                theme="vs-dark"
-                value={irView}
-                onChange={(val) => setIrView(val || "")}
-                options={{
-                  readOnly: false,
-                  minimap: { enabled: false },
-                  fontSize: 12,
-                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                  padding: { top: 16 },
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  lineNumbers: "on",
-                  glyphMargin: false,
-                  folding: true,
-                  lineDecorationsWidth: 0,
-                  lineNumbersMinChars: 3,
-                }}
-              />
+            <div className="flex-1 min-h-0 bg-slate-950/20">
+              {viewMode === "structured" ? (
+                <RenderStructuredContent />
+              ) : (
+                <Editor
+                  height="100%"
+                  defaultLanguage="json"
+                  theme="vs-dark"
+                  value={irView}
+                  onChange={(val) => setIrView(val || "")}
+                  options={{
+                    readOnly: false,
+                    minimap: { enabled: false },
+                    fontSize: 12,
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                    padding: { top: 16 },
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    lineNumbers: "on",
+                    glyphMargin: false,
+                    folding: true,
+                    lineDecorationsWidth: 0,
+                    lineNumbersMinChars: 3,
+                  }}
+                />
+              )}
             </div>
           </Panel>
 
