@@ -14,5 +14,6 @@ router.delete("/review-comments/:commentId", evaluationsController.deleteReviewC
 
 // AI Status Proxy
 router.get("/ai/status", evaluationsController.checkAIStatus);
+router.get("/ai/models", evaluationsController.getModels);
 
 module.exports = router;

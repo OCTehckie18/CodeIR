@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
 const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
-import { evaluateCode, autoGradeCode, checkOllamaConnection } from "../lib/aiService";
+import { evaluateCode, autoGradeCode, checkOllamaConnection, getAvailableModels } from "../lib/aiService";
 import {
   Code as CodeIcon,
   FileJson,
@@ -65,6 +65,8 @@ export default function InstructorEvaluation({
   const [currentEngine, setCurrentEngine] = useState<string>(localStorage.getItem("aiEngine") || "ollama");
   const [copiedIr, setCopiedIr] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>("");
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -74,8 +76,20 @@ export default function InstructorEvaluation({
       setConnectionStatus(isConnected ? "success" : "error");
     };
 
+    const fetchModels = async () => {
+        const models = await getAvailableModels();
+        setAvailableModels(models);
+        if (models.length > 0) {
+            const bestModel = models.find(m => m.toLowerCase().includes("qwen2.5-coder")) || 
+                              models.find(m => m.toLowerCase().includes("coder")) ||
+                              models[0];
+            setSelectedModel(bestModel);
+        }
+    };
+
     if (currentEngine === "ollama") {
       checkConnection();
+      fetchModels();
       interval = setInterval(checkConnection, 5000);
     }
 
@@ -157,7 +171,7 @@ export default function InstructorEvaluation({
       const engine = localStorage.getItem("aiEngine") || "ollama";
       setCurrentEngine(engine);
       
-      const result = await autoGradeCode(code, description, engine);
+      const result = await autoGradeCode(code, description, engine, selectedModel);
 
       if (result.success && result.data) {
         setScores({
@@ -187,7 +201,7 @@ export default function InstructorEvaluation({
       const engine = localStorage.getItem("aiEngine") || "ollama";
       setCurrentEngine(engine);
       
-      const result = await evaluateCode(code, description, engine);
+      const result = await evaluateCode(code, description, engine, selectedModel);
 
       if (result.success) {
         if (result.status === "valid") {
@@ -333,23 +347,37 @@ export default function InstructorEvaluation({
               </span>
               <div className="flex items-center gap-2">
                 {currentEngine === "ollama" && (
-                  <div
-                    className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded transition-colors shadow-lg ${
-                      connectionStatus === "success" 
-                         ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                         : connectionStatus === "error"
-                         ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                         : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                    }`}
-                  >
-                    {connectionStatus === "success" ? (
-                       <CheckCircle2 size={10} />
-                    ) : connectionStatus === "error" ? (
-                       <Zap size={10} />
-                    ) : (
-                       <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain opacity-50" />
+                  <div className="flex items-center gap-2">
+                    {availableModels.length > 0 && (
+                      <select
+                        className="bg-slate-50 dark:bg-slate-950 text-[9px] text-blue-200 border border-blue-500/30 rounded px-2 py-0.5 outline-none hover:bg-slate-900 transition-colors cursor-pointer"
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value)}
+                        title="Ollama Model"
+                      >
+                        {availableModels.map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
                     )}
-                    {connectionStatus === "success" ? "Ollama OK" : connectionStatus === "error" ? "Ollama Offline" : "Checking..."}
+                    <div
+                      className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded transition-colors shadow-lg ${
+                        connectionStatus === "success" 
+                           ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                           : connectionStatus === "error"
+                           ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                           : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                      }`}
+                    >
+                      {connectionStatus === "success" ? (
+                         <CheckCircle2 size={10} />
+                      ) : connectionStatus === "error" ? (
+                         <Zap size={10} />
+                      ) : (
+                         <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain opacity-50" />
+                      )}
+                      {connectionStatus === "success" ? "Ollama OK" : connectionStatus === "error" ? "Ollama Offline" : "Checking..."}
+                    </div>
                   </div>
                 )}
                 <button

@@ -11,22 +11,33 @@ export async function checkOllamaConnection(): Promise<boolean> {
   }
 }
 
-export async function evaluateCode(code: string, description: string, engine: string) {
+export async function getAvailableModels(): Promise<string[]> {
+  try {
+    const res = await axios.get(`${baseUrl}/api/ai/models`);
+    return res.data?.models || [];
+  } catch (error: any) {
+    return [];
+  }
+}
+
+export async function evaluateCode(code: string, description: string, engine: string, model?: string) {
   // All engines (Ollama/Gemini) are now handled via backend to avoid CORS issues
   const response = await axios.post(`${baseUrl}/api/evaluate-code`, {
     code,
     description,
     engine,
+    model,
   });
   return response.data;
 }
 
-export async function autoGradeCode(code: string, description: string, engine: string) {
+export async function autoGradeCode(code: string, description: string, engine: string, model?: string) {
   // All engines (Ollama/Gemini) are now handled via backend to avoid CORS issues
   const response = await axios.post(`${baseUrl}/api/auto-grade`, {
     code,
     description,
     engine,
+    model,
   });
   return response.data;
 }

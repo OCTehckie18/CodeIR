@@ -1,19 +1,19 @@
-const { supabase, createAuthClient, generateAIContent, checkOllamaStatus } = require("../config");
+const { supabase, createAuthClient, generateAIContent, checkOllamaStatus, getOllamaModels } = require("../config");
 
 exports.evaluateCode = async (req, res) => {
-    const { code, description, engine = "ollama" } = req.body;
+    const { code, description, engine = "ollama", model = "qwen2.5-coder:7b" } = req.body;
     if (!code || !description) return res.status(400).json({ success: false, error: "Code and description are required." });
     try {
         const correctnessPrompt = `You are an expert code reviewer. Read the following problem description and the provided code. Is the code a completely correct solution to the problem? Respond with EXACTLY the word 'CORRECT' if it is correct, or provide brief feedback on what is wrong if it is incorrect.\nProblem: ${description}\nCode:\n${code}`;
-        const rawFeedback = await generateAIContent(engine, correctnessPrompt);
+        const rawFeedback = await generateAIContent(engine, correctnessPrompt, model);
         const feedback = rawFeedback.trim();
 
         if (feedback.toUpperCase().includes("CORRECT") && feedback.length < 50) {
             const irPrompt = `Generate high-level pseudocode for the following code. Output ONLY the pseudocode. Do not include any other text.\nCode:\n${code}`;
             const translatePrompt = `Translate the following code into Python, Java, and C++. Format the output clearly with markdown code blocks.\nCode:\n${code}`;
             const [irOutput, translatedCode] = await Promise.all([
-                generateAIContent(engine, irPrompt),
-                generateAIContent(engine, translatePrompt)
+                generateAIContent(engine, irPrompt, model),
+                generateAIContent(engine, translatePrompt, model)
             ]);
             res.status(200).json({ success: true, status: "valid", feedback: "CORRECT", irOutput, translatedCode });
         } else {
@@ -44,7 +44,7 @@ exports.upsertEvaluation = async (req, res) => {
 
 exports.autoGrade = async (req, res) => {
     try {
-        const { code, description, engine = "ollama" } = req.body;
+        const { code, description, engine = "ollama", model = "qwen2.5-coder:7b" } = req.body;
         if (!code) return res.status(400).json({ success: false, error: "Code is required for auto-grading." });
         const prompt = `You are an expert Computer Science Instructor grading a student's code. 
 Problem Description: ${description || "Unknown"}
@@ -55,7 +55,7 @@ Grade the code strictly on three metrics out of 10: correctness, efficiency, and
 Provide a brief feedback string explaining the grade.
 Return EXACTLY a JSON string with no markdown blocks or extra text, in this format:
 {"correctness": number, "efficiency": number, "style": number, "feedback": "string"}`;
-        const rawText = await generateAIContent(engine, prompt);
+        const rawText = await generateAIContent(engine, prompt, model);
         let text = rawText.trim();
         if (text.startsWith("```json")) text = text.replace(/```json/g, "");
         if (text.startsWith("```")) text = text.replace(/```/g, "");
@@ -135,5 +135,14 @@ exports.checkAIStatus = async (req, res) => {
         res.status(200).json({ success: true, connected: isConnected });
     } catch (error) {
         res.status(200).json({ success: true, connected: false });
+    }
+};
+
+exports.getModels = async (req, res) => {
+    try {
+        const models = await getOllamaModels();
+        res.status(200).json({ success: true, models });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 };

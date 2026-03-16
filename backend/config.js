@@ -26,12 +26,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 // Helper to switch engines transparently
-async function generateAIContent(engine, prompt) {
+async function generateAIContent(engine, prompt, modelName = "qwen2.5-coder:7b") {
     if (engine === "ollama") {
         try {
-            console.log(`[Ollama] Sending request to qwen2.5-coder:7b...`);
+            console.log(`[Ollama] Sending request to ${modelName}...`);
             const res = await axios.post("http://127.0.0.1:11434/api/generate", {
-                model: "qwen2.5-coder:7b",
+                model: modelName,
                 prompt: prompt,
                 stream: false
             }, {
@@ -69,9 +69,22 @@ async function checkOllamaStatus() {
     }
 }
 
+async function getOllamaModels() {
+    try {
+        const res = await axios.get("http://127.0.0.1:11434/api/tags", { timeout: 3000 });
+        if (res.data && res.data.models) {
+            return res.data.models.map(m => m.name);
+        }
+        return [];
+    } catch (error) {
+        return [];
+    }
+}
+
 module.exports = {
     supabase,
     createAuthClient,
     generateAIContent,
-    checkOllamaStatus
+    checkOllamaStatus,
+    getOllamaModels
 };

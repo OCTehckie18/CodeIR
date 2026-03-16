@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
 const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 import { handleApiError, showSuccess } from "../lib/errorHandler";
-import { evaluateCode, checkOllamaConnection } from "../lib/aiService";
+import { evaluateCode, checkOllamaConnection, getAvailableModels } from "../lib/aiService";
 import {
   Code as CodeIcon,
   Brain,
@@ -80,6 +80,8 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
   const [copiedIr, setCopiedIr] = useState(false);
   const [engine] = useState(localStorage.getItem("aiEngine") || "ollama");
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>("");
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -89,10 +91,21 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
       setConnectionStatus(isConnected ? "success" : "error");
     };
 
+    const fetchModels = async () => {
+        const models = await getAvailableModels();
+        setAvailableModels(models);
+        if (models.length > 0) {
+            // Auto-detection logic: prioritize qwen2.5-coder
+            const bestModel = models.find(m => m.toLowerCase().includes("qwen2.5-coder")) || 
+                              models.find(m => m.toLowerCase().includes("coder")) ||
+                              models[0];
+            setSelectedModel(bestModel);
+        }
+    };
+
     if (engine === "ollama") {
-      // Check immediately on mount/engine change
       checkConnection();
-      // Then poll every 5 seconds
+      fetchModels();
       interval = setInterval(checkConnection, 5000);
     }
 
@@ -237,7 +250,7 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
 
     try {
       const engine = localStorage.getItem("aiEngine") || "ollama";
-      const result = await evaluateCode(code, description, engine);
+      const result = await evaluateCode(code, description, engine, selectedModel);
 
       const {
         success,
@@ -421,23 +434,37 @@ export default function CodeEditor({ onNavigate, problem, resumeDraft }: CodeEdi
                     </div>
                     <div className="flex items-center gap-2">
                       {engine === "ollama" && (
-                        <div
-                          className={`px-3 py-1.5 text-[10px] font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-1.5 border ${
-                            connectionStatus === "success" 
-                               ? "bg-green-500/20 text-green-400 border-green-500/30"
-                               : connectionStatus === "error"
-                               ? "bg-red-500/20 text-red-400 border-red-500/30"
-                               : "bg-orange-500/20 text-orange-400 border-orange-500/30"
-                          }`}
-                        >
-                          {connectionStatus === "success" ? (
-                             <CheckCircle2 size={12} />
-                          ) : connectionStatus === "error" ? (
-                             <Activity size={12} />
-                          ) : (
-                             <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain opacity-50" />
-                          )}
-                          {connectionStatus === "success" ? "OLLAMA OK" : connectionStatus === "error" ? "OLLAMA OFFLINE" : "CHECKING..."}
+                        <div className="flex items-center gap-2">
+                           {availableModels.length > 0 && (
+                            <select
+                              className="bg-slate-50 dark:bg-slate-950 text-[10px] text-emerald-200 border border-emerald-500/30 rounded px-2 py-1 outline-none hover:bg-slate-900 transition-colors cursor-pointer"
+                              value={selectedModel}
+                              onChange={(e) => setSelectedModel(e.target.value)}
+                              title="Ollama Model"
+                            >
+                              {availableModels.map(m => (
+                                <option key={m} value={m}>{m}</option>
+                              ))}
+                            </select>
+                           )}
+                          <div
+                            className={`px-3 py-1.5 text-[10px] font-bold tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-1.5 border ${
+                              connectionStatus === "success" 
+                                ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                : connectionStatus === "error"
+                                ? "bg-red-500/20 text-red-400 border-red-500/30"
+                                : "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                            }`}
+                          >
+                            {connectionStatus === "success" ? (
+                               <CheckCircle2 size={12} />
+                            ) : connectionStatus === "error" ? (
+                               <Activity size={12} />
+                            ) : (
+                               <img src={logo} alt="Loading" className="animate-float w-3 h-3 object-contain opacity-50" />
+                            )}
+                            {connectionStatus === "success" ? "OLLAMA OK" : connectionStatus === "error" ? "OLLAMA OFFLINE" : "CHECKING..."}
+                          </div>
                         </div>
                       )}
                       
