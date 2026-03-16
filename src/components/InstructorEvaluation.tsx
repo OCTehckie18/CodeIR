@@ -51,7 +51,7 @@ export default function InstructorEvaluation({
   );
   const [language, setLanguage] = useState("python");
   const [irView, setIrView] = useState(
-    "{\n  'status': 'No IR generated yet'\n}",
+    JSON.stringify({ status: "No IR generated yet" }, null, 2),
   );
 
   const [feedback, setFeedback] = useState("");
@@ -197,7 +197,7 @@ export default function InstructorEvaluation({
 
   const handleValidateCode = async () => {
     setIsValidating(true);
-    setIrView("{\n  'status': 'Generating IR... Please wait...'\n}");
+    setIrView(JSON.stringify({ status: "Generating IR... Please wait..." }, null, 2));
     try {
       const description =
         submission?.problems?.problem_statement || "Evaluate this code.";
@@ -208,24 +208,45 @@ export default function InstructorEvaluation({
         if (result.status === "valid") {
           setIrView(result.irOutput);
         } else {
+          // Structure the feedback if it's multiple paragraphs
+          const paragraphs = (result.feedback || "")
+            .split(/\n\n+/)
+            .map((p: string) => p.trim())
+            .filter((p: string) => p.length > 0);
+
           setIrView(
-            "{\n  'status': 'Validation Failed',\n  'feedback': " +
-              JSON.stringify(result.feedback) +
-              "\n}",
+            JSON.stringify(
+              {
+                status: "Validation Failed",
+                feedback: paragraphs.length > 1 ? paragraphs : result.feedback,
+              },
+              null,
+              2,
+            ),
           );
         }
       } else {
         setIrView(
-          "{\n  'status': 'Validation Error',\n  'error': " +
-            JSON.stringify(result.error) +
-            "\n}",
+          JSON.stringify(
+            {
+              status: "Validation Error",
+              error: result.error,
+            },
+            null,
+            2,
+          ),
         );
       }
     } catch (error: any) {
       setIrView(
-        "{\n  'status': 'Connection Error',\n  'error': " +
-          JSON.stringify(error.message) +
-          "\n}",
+        JSON.stringify(
+          {
+            status: "Connection Error",
+            error: error.message,
+          },
+          null,
+          2,
+        ),
       );
     } finally {
       setIsValidating(false);
