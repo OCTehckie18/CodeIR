@@ -143,27 +143,29 @@ export default function InstructorEvaluation({
                 ? pseudoObj.structured_blocks
                 : JSON.stringify(pseudoObj.structured_blocks, null, 2),
             );
+          } else {
+            setIrView(JSON.stringify({ status: "No IR generated yet" }, null, 2));
           }
 
           const evalsArray = Array.isArray(data.evaluations) ? data.evaluations : (data.evaluations ? [data.evaluations] : []);
           if (evalsArray.length > 0) {
             const ev = evalsArray[0];
-            if (ev.final_scores) {
-              setScores(ev.final_scores);
-            }
-            if (ev.teacher_feedback) {
-              setFeedback(ev.teacher_feedback);
-            }
+            if (ev.final_scores) setScores(ev.final_scores);
+            if (ev.teacher_feedback) setFeedback(ev.teacher_feedback);
+          } else {
+            setScores({ correctness: 0, efficiency: 0, style: 0 });
+            setFeedback("");
           }
         } catch (error) {
           console.error("Error fetching submission:", error);
         }
       } else {
-        // Manual Mode (No ID passed)
+        // --- MANUAL EVALUATION MODE ---
         setSubmission(null);
-        setCode(
-          "// Manual Evaluation Mode.\n// Paste student code here and click Validate to generate IR.",
-        );
+        setCode("// Manual Evaluation Mode.\n// Paste student code here and click Validate to generate IR.");
+        setIrView(JSON.stringify({ status: "Manual Mode: Ready for input" }, null, 2));
+        setScores({ correctness: 0, efficiency: 0, style: 0 });
+        setFeedback("");
       }
     };
     init();

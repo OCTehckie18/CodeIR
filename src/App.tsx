@@ -73,8 +73,9 @@ function App() {
     if (user) {
       const existingRole = user.user_metadata?.role;
       if (existingRole) {
-        // Normalize role: treat 'teacher' as 'instructor' for application logic
-        setRole(existingRole === "teacher" ? "instructor" : existingRole);
+        // Normalize role: treat 'teacher' as 'instructor' for application logic (case-insensitive)
+        const normalized = String(existingRole).toLowerCase();
+        setRole(normalized === "teacher" ? "instructor" : normalized);
       } else {
         console.log("New Social User detected, assigning default: student");
         setRole("student");
@@ -89,8 +90,17 @@ function App() {
   // Protected Routes Wrapper
   const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole?: string }) => {
     if (!session) return <Navigate to="/" replace />;
+    
+    // Normalize role check: treat 'teacher' as 'instructor'
+    const currentRole = role?.toLowerCase();
+    const targetRole = allowedRole?.toLowerCase();
+    
+    if (targetRole === "instructor" && (currentRole === "instructor" || currentRole === "teacher")) {
+      return <>{children}</>;
+    }
+    
     if (allowedRole && role !== allowedRole) return <Navigate to="/dashboard" replace />;
-    return children;
+    return <>{children}</>;
   };
 
   return (
@@ -118,7 +128,7 @@ function App() {
         {/* Unified Dashboard Route */}
         <Route path="/dashboard" element={
           <ProtectedRoute>
-            {role === "instructor" ? (
+            {(role === "instructor" || role === "teacher") ? (
               <InstructorDashboard onNavigate={(view, subId) => {
                 if (view === "evaluation") {
                   if (subId) navigate(`/evaluation/${subId}`);

@@ -392,7 +392,7 @@ export default function AuthForm({ initialMode = "login" }: { initialMode?: "log
                       Student
                     </option>
                     <option value="instructor" className="bg-[#0f172a]">
-                      Instructor
+                      Instructor / Teacher
                     </option>
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-600 dark:text-slate-400">

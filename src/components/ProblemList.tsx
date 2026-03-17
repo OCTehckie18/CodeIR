@@ -26,7 +26,7 @@ interface Problem {
 }
 
 interface ProblemListProps {
-  role: "student" | "instructor";
+  role: "student" | "instructor" | "teacher";
   onNavigate: (view: any) => void;
   onSelectProblem?: (problem: Problem) => void;
 }
@@ -162,7 +162,7 @@ export default function ProblemList({
     <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden">
       {/* SHARED NAV BAR */}
       <NavBar
-        role={role === "instructor" ? "instructor" : "student"}
+        role={(role === "instructor" || role === "teacher") ? "instructor" : "student"}
         active="problems"
         onNavigate={onNavigate}
         email={user?.email}
@@ -177,7 +177,7 @@ export default function ProblemList({
                 Problem Bank
               </h1>
               <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                {role === "instructor"
+                {(role === "instructor" || role === "teacher")
                   ? "Manage coding problems for students."
                   : "Select a problem to start coding and testing."}
               </p>
@@ -227,7 +227,7 @@ export default function ProblemList({
                 </select>
               </div>
 
-              {role === "instructor" && (
+              {(role === "instructor" || role === "teacher") && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => onNavigate("evaluation")}
@@ -281,7 +281,7 @@ export default function ProblemList({
                   </div>
 
                   <div className="flex gap-2 relative z-10 pt-4 border-t border-black/5 dark:border-white/5">
-                    {role === "instructor" ? (
+                    {(role === "instructor" || role === "teacher") ? (
                       <>
                         <button
                           onClick={() => handleEdit(problem)}
@@ -322,7 +322,7 @@ export default function ProblemList({
                   <p className="px-6 py-2 text-sm text-slate-500 dark:text-slate-500 max-w-md">
                     {searchQuery || filterDifficulty !== "All"
                       ? "We couldn't find any problems matching your search or filter criteria. Try adjusting your search or difficulty level."
-                      : role === "instructor"
+                      : (role === "instructor" || role === "teacher")
                         ? "You haven't created any problems yet. Click 'Create' to add your first challenge."
                         : "Your instructor hasn't added any problems yet."}
                   </p>

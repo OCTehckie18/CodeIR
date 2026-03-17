@@ -26,7 +26,7 @@ type StudentView = "dashboard" | "problems" | "editor";
 type InstructorView = "dashboard" | "problems" | "evaluation";
 
 interface NavBarProps {
-  role: "student" | "instructor";
+  role: "student" | "instructor" | "teacher";
   active: StudentView | InstructorView;
   onNavigate: (view: any) => void;
   email?: string;

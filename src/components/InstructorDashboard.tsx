@@ -153,7 +153,7 @@ export default function InstructorDashboard({
                     {user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Instructor"}
                   </h2>
                   <p className="text-sm text-red-400 font-medium mt-0.5">
-                    {user?.user_metadata?.role === "instructor" ? "Faculty Evaluator" : "Instructor"}
+                    { (user?.user_metadata?.role === "instructor" || user?.user_metadata?.role === "teacher") ? "Faculty Evaluator" : "Instructor" }
                   </p>
                 </div>
               </div>
