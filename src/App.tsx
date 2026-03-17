@@ -119,8 +119,10 @@ function App() {
           <ProtectedRoute>
             {role === "instructor" ? (
               <InstructorDashboard onNavigate={(view, subId) => {
-                if (view === "evaluation" && subId) navigate(`/evaluation/${subId}`);
-                else if (view === "problems") navigate("/problems");
+                if (view === "evaluation") {
+                  if (subId) navigate(`/evaluation/${subId}`);
+                  else navigate("/evaluation");
+                } else if (view === "problems") navigate("/problems");
                 else navigate("/dashboard");
               }} />
             ) : (
@@ -154,6 +156,14 @@ function App() {
               onNavigate={(view) => navigate(view === "dashboard" ? "/dashboard" : `/${view}`)} 
               problem={selectedProblem} 
               resumeDraft={resumeDraft} 
+            />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/evaluation" element={
+          <ProtectedRoute allowedRole="instructor">
+            <InstructorEvaluation 
+              onNavigate={(view) => navigate(view === "dashboard" ? "/dashboard" : `/${view}`)} 
             />
           </ProtectedRoute>
         } />

@@ -191,6 +191,13 @@ export default function InstructorDashboard({
                   View Problem Bank
                   <ChevronRight size={16} />
                 </button>
+                <button
+                  onClick={() => onNavigate("evaluation")}
+                  className="w-full py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-sm font-bold border border-emerald-500/20 rounded-xl transition-colors text-left px-4 flex justify-between items-center"
+                >
+                  Manual Evaluation
+                  <ChevronRight size={16} />
+                </button>
               </div>
             </div>
           </div>

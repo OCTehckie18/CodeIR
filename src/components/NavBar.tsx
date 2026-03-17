@@ -48,7 +48,7 @@ export default function NavBar({
     if (view === "dashboard") navigate("/dashboard");
     else if (view === "problems") navigate("/problems");
     else if (view === "editor") navigate("/editor");
-    else if (view === "evaluation") navigate("/dashboard"); // Fallback for evaluation tab
+    else if (view === "evaluation") navigate("/evaluation");
     else if (onNavigate) onNavigate(view);
   };
 
