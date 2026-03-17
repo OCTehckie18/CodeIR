@@ -185,10 +185,10 @@ export default function InstructorDashboard({
               </h3>
               <div className="flex flex-col gap-3">
                 <button
-                  onClick={() => onNavigate("evaluation")}
-                  className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-bold border border-red-500/20 rounded-xl transition-colors text-left px-4 flex justify-between items-center"
+                  onClick={() => onNavigate("problems")}
+                  className="w-full py-2.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-sm font-bold border border-cyan-500/20 rounded-xl transition-colors text-left px-4 flex justify-between items-center"
                 >
-                  Go to Evaluation
+                  View Problem Bank
                   <ChevronRight size={16} />
                 </button>
               </div>

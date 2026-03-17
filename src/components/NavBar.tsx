@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 // import ThemeToggle from "./ThemeToggle";
 import {
@@ -37,8 +38,18 @@ export default function NavBar({
   onNavigate,
   email,
 }: NavBarProps) {
+  const navigate = useNavigate();
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
+  };
+
+  const handleNav = (view: string) => {
+    if (view === "dashboard") navigate("/dashboard");
+    else if (view === "problems") navigate("/problems");
+    else if (view === "editor") navigate("/editor");
+    else if (view === "evaluation") navigate("/dashboard"); // Fallback for evaluation tab
+    else if (onNavigate) onNavigate(view);
   };
 
   // Shared tab base class
@@ -58,7 +69,7 @@ export default function NavBar({
           <div
             id="nav-dashboard"
             className={`${tabBase} ${active === "dashboard" ? `text-red-400 border-b-2 border-red-400 pb-0.5` : tabInactive}`}
-            onClick={() => onNavigate("dashboard")}
+            onClick={() => handleNav("dashboard")}
           >
             <LayoutDashboard size={20} />
             <span>DASHBOARD</span>
@@ -70,7 +81,7 @@ export default function NavBar({
           <div
             id="nav-problems"
             className={`${tabBase} ${active === "problems" ? `text-cyan-400 border-b-2 border-cyan-400 pb-0.5` : tabInactive}`}
-            onClick={() => onNavigate("problems")}
+            onClick={() => handleNav("problems")}
           >
             <BookOpen size={20} />
             <span>PROBLEM BANK</span>
@@ -82,7 +93,7 @@ export default function NavBar({
           <div
             id="nav-editor"
             className={`${tabBase} ${active === "editor" ? `text-cyan-400 border-b-2 border-cyan-400 pb-0.5` : tabInactive}`}
-            onClick={() => onNavigate("editor")}
+            onClick={() => handleNav("editor")}
           >
             <CodeIcon size={20} />
             <span>EDITOR</span>
@@ -123,7 +134,7 @@ export default function NavBar({
         <div
           id="nav-dashboard"
           className={`${tabBase} ${active === "dashboard" ? `text-red-400 border-b-2 border-red-400 pb-0.5` : tabInactive}`}
-          onClick={() => onNavigate("dashboard")}
+          onClick={() => handleNav("dashboard")}
         >
           <LayoutDashboard size={20} />
           <span>DASHBOARD</span>
@@ -135,7 +146,7 @@ export default function NavBar({
         <div
           id="nav-problems"
           className={`${tabBase} ${active === "problems" ? `text-cyan-400 border-b-2 border-cyan-400 pb-0.5` : tabInactive}`}
-          onClick={() => onNavigate("problems")}
+          onClick={() => handleNav("problems")}
         >
           <BookOpen size={20} />
           <span>PROBLEM BANK</span>
@@ -147,7 +158,7 @@ export default function NavBar({
         <div
           id="nav-evaluation"
           className={`${tabBase} ${active === "evaluation" ? `text-emerald-400 border-b-2 border-emerald-400 pb-0.5` : tabInactive}`}
-          onClick={() => onNavigate("evaluation")}
+          onClick={() => handleNav("evaluation")}
         >
           <ClipboardCheck size={20} />
           <span>EVALUATION</span>

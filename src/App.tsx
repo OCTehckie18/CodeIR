@@ -119,27 +119,27 @@ function App() {
           <ProtectedRoute>
             {role === "instructor" ? (
               <InstructorDashboard onNavigate={(view, subId) => {
-                if (view === "evaluation") navigate(`/evaluation/${subId}`);
+                if (view === "evaluation" && subId) navigate(`/evaluation/${subId}`);
                 else if (view === "problems") navigate("/problems");
+                else navigate("/dashboard");
               }} />
             ) : (
               <StudentDashboard onNavigate={(view, draft) => {
                 if (view === "problems") navigate("/problems");
                 else if (view === "editor") {
-                  setResumeDraft(draft ?? null);
+                  if (draft) setResumeDraft(draft);
                   navigate("/editor");
-                }
+                } else navigate("/dashboard");
               }} />
             )}
           </ProtectedRoute>
         } />
 
-        {/* Shared / Specific View Routes */}
         <Route path="/problems" element={
           <ProtectedRoute>
             <ProblemList 
               role={role as any} 
-              onNavigate={() => navigate("/dashboard")} 
+              onNavigate={(view) => navigate(view === "dashboard" ? "/dashboard" : `/${view}`)} 
               onSelectProblem={(p) => {
                 setSelectedProblem(p);
                 navigate("/editor");
@@ -151,7 +151,7 @@ function App() {
         <Route path="/editor" element={
           <ProtectedRoute allowedRole="student">
             <CodeEditor 
-              onNavigate={() => navigate("/dashboard")} 
+              onNavigate={(view) => navigate(view === "dashboard" ? "/dashboard" : `/${view}`)} 
               problem={selectedProblem} 
               resumeDraft={resumeDraft} 
             />
@@ -161,7 +161,7 @@ function App() {
         <Route path="/evaluation/:submissionId" element={
           <ProtectedRoute allowedRole="instructor">
             <InstructorEvaluation 
-              onNavigate={() => navigate("/dashboard")} 
+              onNavigate={(view) => navigate(view === "dashboard" ? "/dashboard" : `/${view}`)} 
             />
           </ProtectedRoute>
         } />
