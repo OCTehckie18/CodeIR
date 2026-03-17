@@ -319,7 +319,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={logo} alt="CodeIR" className="h-8 w-auto drop-shadow-[0_0_10px_rgba(6,182,212,0.7)]" />
-            <span className="text-xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">CodeIR</span>
+            {/* <span className="text-xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">CodeIR</span> */}
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
             {["Features", "AI Models", "Dashboards"].map((item) => (
