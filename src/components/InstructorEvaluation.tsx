@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import { supabase } from "../lib/supabaseClient";
 import axios from "axios";
@@ -38,9 +39,11 @@ interface InstructorEvaluationProps {
 }
 
 export default function InstructorEvaluation({
-  submissionId,
+  submissionId: propSubmissionId,
   onNavigate,
 }: InstructorEvaluationProps) {
+  const { submissionId: urlSubmissionId } = useParams();
+  const submissionId = propSubmissionId || urlSubmissionId;
   const [loading, setLoading] = useState(false);
   const [isAutoGrading, setIsAutoGrading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);

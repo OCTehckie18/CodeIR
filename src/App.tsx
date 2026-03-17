@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
 import { supabase } from "./lib/supabaseClient";
 import LandingPage from "./components/LandingPage";
@@ -16,28 +17,16 @@ function App() {
   const [session, setSession] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  // Landing page gate — show landing for unauthenticated visitors
-  const [showLanding, setShowLanding] = useState(true);
-  const [authMode, setAuthMode] = useState<"login" | "signup" | "update_password">("login");
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // VIEW STATES
-  const [studentView, setStudentView] = useState<
-    "editor" | "dashboard" | "problems"
-  >("dashboard");
+  // VIEW STATES (Maintained for internal component transitions)
   const [selectedProblem, setSelectedProblem] = useState<any>(null);
   const [resumeDraft, setResumeDraft] = useState<DraftResume | null>(null);
 
-  // INSTRUCTOR STATES
-  const [instructorView, setInstructorView] = useState<
-    "dashboard" | "evaluation" | "problems"
-  >("dashboard");
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState<
-    string | undefined
-  >(undefined);
-
   useEffect(() => {
-    // Check for auth errors in URL (e.g. from GitHub/Google redirects)
+    // Check for auth errors in URL
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const searchParams = new URLSearchParams(window.location.search);
     
@@ -49,13 +38,10 @@ function App() {
       toast.error(decodedError, { duration: 5000 });
       
       // Clean up the URL
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
+      navigate(window.location.pathname, { replace: true });
       
-      // If it's a "User already registered" error, we should probably stay on the Login page
       if (errorType === "access_denied" || error.includes("already registered")) {
-        setShowLanding(false);
-        setAuthMode("login");
+        navigate("/auth?mode=login");
       }
     }
 
@@ -65,13 +51,10 @@ function App() {
       else setLoading(false);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
-        setAuthMode("update_password");
         setIsPasswordRecovery(true);
-        setShowLanding(false); // Make sure they see the auth form
+        navigate("/auth?mode=update_password");
       }
 
       setSession(session);
@@ -83,29 +66,18 @@ function App() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const fetchRole = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    
+    const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const existingRole = user.user_metadata?.role;
-      
       if (existingRole) {
         setRole(existingRole);
       } else {
-        // Social Login user with no role assigned yet
         console.log("New Social User detected, assigning default: student");
-        
-        // 1. Set local state so they can see the dashboard immediately
         setRole("student");
-        
-        // 2. Persist this role to Supabase metadata for future logins
-        await supabase.auth.updateUser({
-          data: { role: "student" }
-        });
+        await supabase.auth.updateUser({ data: { role: "student" } });
       }
     }
     setLoading(false);
@@ -113,83 +85,11 @@ function App() {
 
   if (loading) return <PageLoader message="Authenticating..." />;
 
-  if (!session || isPasswordRecovery) {
-    if (showLanding && !isPasswordRecovery) {
-      return (
-        <LandingPage
-          onGetStarted={(mode) => {
-            setAuthMode(mode);
-            setShowLanding(false);
-          }}
-        />
-      );
-    }
-    return <AuthForm initialMode={authMode} />;
-  }
-
-  const renderAppContent = () => {
-    // === INSTRUCTOR ROUTING ===
-    if (role === "instructor") {
-      if (instructorView === "dashboard") {
-        return (
-          <InstructorDashboard
-            onNavigate={(view, subId) => {
-              setInstructorView(view);
-              setSelectedSubmissionId(subId);
-            }}
-          />
-        );
-      } else if (instructorView === "evaluation") {
-        return (
-          <InstructorEvaluation
-            submissionId={selectedSubmissionId}
-            onNavigate={(view) => {
-              setInstructorView(view);
-              if (view !== "evaluation") setSelectedSubmissionId(undefined);
-            }}
-          />
-        );
-      } else if (instructorView === "problems") {
-        return <ProblemList role="instructor" onNavigate={setInstructorView} />;
-      }
-    }
-
-    // === STUDENT ROUTING ===
-    return (
-      <div>
-        {studentView === "dashboard" ? (
-          <StudentDashboard
-            onNavigate={(view, draft?: DraftResume | null) => {
-              setResumeDraft(draft ?? null);
-              setSelectedProblem(null);
-              setStudentView(view);
-            }}
-          />
-        ) : studentView === "problems" ? (
-          <ProblemList
-            role="student"
-            onNavigate={(view) => {
-              setResumeDraft(null);
-              setStudentView(view);
-            }}
-            onSelectProblem={(problem) => {
-              setSelectedProblem(problem);
-              setResumeDraft(null);
-              setStudentView("editor");
-            }}
-          />
-        ) : (
-          <CodeEditor
-            onNavigate={(view) => {
-              setResumeDraft(null);
-              setStudentView(view);
-            }}
-            problem={selectedProblem}
-            resumeDraft={resumeDraft}
-          />
-        )}
-      </div>
-    );
+  // Protected Routes Wrapper
+  const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole?: string }) => {
+    if (!session) return <Navigate to="/" replace />;
+    if (allowedRole && role !== allowedRole) return <Navigate to="/dashboard" replace />;
+    return children;
   };
 
   return (
@@ -208,7 +108,68 @@ function App() {
           error: { iconTheme: { primary: "#f87171", secondary: "#1e293b" } },
         }}
       />
-      {renderAppContent()}
+      
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={!session ? <LandingPage onGetStarted={(mode) => navigate(`/auth?mode=${mode}`)} /> : <Navigate to="/dashboard" replace />} />
+        <Route path="/auth" element={!session || isPasswordRecovery ? <AuthForm initialMode={(new URLSearchParams(location.search).get("mode") as any) || "login"} /> : <Navigate to="/dashboard" replace />} />
+
+        {/* Unified Dashboard Route */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            {role === "instructor" ? (
+              <InstructorDashboard onNavigate={(view, subId) => {
+                if (view === "evaluation") navigate(`/evaluation/${subId}`);
+                else if (view === "problems") navigate("/problems");
+              }} />
+            ) : (
+              <StudentDashboard onNavigate={(view, draft) => {
+                if (view === "problems") navigate("/problems");
+                else if (view === "editor") {
+                  setResumeDraft(draft ?? null);
+                  navigate("/editor");
+                }
+              }} />
+            )}
+          </ProtectedRoute>
+        } />
+
+        {/* Shared / Specific View Routes */}
+        <Route path="/problems" element={
+          <ProtectedRoute>
+            <ProblemList 
+              role={role as any} 
+              onNavigate={() => navigate("/dashboard")} 
+              onSelectProblem={(p) => {
+                setSelectedProblem(p);
+                navigate("/editor");
+              }}
+            />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/editor" element={
+          <ProtectedRoute allowedRole="student">
+            <CodeEditor 
+              onNavigate={() => navigate("/dashboard")} 
+              problem={selectedProblem} 
+              resumeDraft={resumeDraft} 
+            />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/evaluation/:submissionId" element={
+          <ProtectedRoute allowedRole="instructor">
+            <InstructorEvaluation 
+              onNavigate={() => navigate("/dashboard")} 
+            />
+          </ProtectedRoute>
+        } />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
       {session && (
         <>
           <FloatingChat />
@@ -220,3 +181,4 @@ function App() {
 }
 
 export default App;
+
