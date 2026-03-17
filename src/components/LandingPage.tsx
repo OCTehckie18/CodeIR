@@ -989,7 +989,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <img src={logo} alt="CodeIR" className="h-7 w-auto opacity-60" />
-            <span className="text-slate-500 font-semibold text-sm">CodeIR</span>
+            {/* <span className="text-slate-500 font-semibold text-sm">CodeIR</span> */}
             <span className="text-emerald-500 text-xs font-bold uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Live Instance
