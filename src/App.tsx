@@ -73,7 +73,8 @@ function App() {
     if (user) {
       const existingRole = user.user_metadata?.role;
       if (existingRole) {
-        setRole(existingRole);
+        // Normalize role: treat 'teacher' as 'instructor' for application logic
+        setRole(existingRole === "teacher" ? "instructor" : existingRole);
       } else {
         console.log("New Social User detected, assigning default: student");
         setRole("student");

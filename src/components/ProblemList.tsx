@@ -228,21 +228,29 @@ export default function ProblemList({
               </div>
 
               {role === "instructor" && (
-                <button
-                  onClick={() => {
-                    setEditingProblem(null);
-                    setFormData({
-                      title: "",
-                      problem_statement: "",
-                      boilerplate_code: "",
-                      difficulty_level: "Easy",
-                    });
-                    setShowForm(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg transition-all shadow-lg hover:-translate-y-0.5 text-sm"
-                >
-                  <Plus size={16} /> Create
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onNavigate("evaluation")}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/20 rounded-lg transition-all hover:-translate-y-0.5 text-sm"
+                  >
+                    <Play size={14} /> Manual Tool
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingProblem(null);
+                      setFormData({
+                        title: "",
+                        problem_statement: "",
+                        boilerplate_code: "",
+                        difficulty_level: "Easy",
+                      });
+                      setShowForm(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg transition-all shadow-lg hover:-translate-y-0.5 text-sm"
+                  >
+                    <Plus size={16} /> Create
+                  </button>
+                </div>
               )}
             </div>
           </div>
