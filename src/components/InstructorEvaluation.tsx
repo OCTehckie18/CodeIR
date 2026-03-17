@@ -20,6 +20,7 @@ import {
   Palette,
   AlertCircle,
   ExternalLink,
+  Download,
 } from "lucide-react";
 
 import {
@@ -410,6 +411,47 @@ export default function InstructorEvaluation({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDownloadEvaluation = () => {
+    const timestamp = new Date().toLocaleString();
+    const totalScore = scores.correctness + scores.efficiency + scores.style;
+    const content = `CODEIR MANUAL EVALUATION REPORT
+===============================
+Generated on: ${timestamp}
+
+--- STUDENT SOURCE CODE ---
+Language: ${language}
+---------------------------
+${code}
+
+--- STRUCTURED IR (PSEUDOCODE) ---
+----------------------------------
+${irView}
+
+--- EVALUATION SCORES ---
+Correctness: ${scores.correctness}/10
+Efficiency:  ${scores.efficiency}/10
+Style:        ${scores.style}/10
+-------------------------
+TOTAL SCORE: ${totalScore}/30
+=========================
+
+--- INSTRUCTOR FEEDBACK ---
+---------------------------
+${feedback || "No feedback provided."}
+
+---------------------------
+End of Report
+`;
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `manual_evaluation_${new Date().getTime()}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -858,11 +900,19 @@ export default function InstructorEvaluation({
                           onChange={(e) => setFeedback(e.target.value)}
                         />
                       </div>
-                      <div className="p-4 bg-emerald-900/20 border-t border-emerald-500/20 flex-shrink-0">
+                      <div className="p-4 bg-emerald-900/20 border-t border-emerald-500/20 flex-shrink-0 flex gap-2">
+                        {!submission && (
+                          <button
+                            onClick={handleDownloadEvaluation}
+                            className="flex-1 py-2.5 font-bold rounded-lg shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all bg-blue-600 hover:bg-blue-500 text-white"
+                          >
+                            <Download size={16} /> Download
+                          </button>
+                        )}
                         <button
                           onClick={handleSubmitEvaluation}
                           disabled={loading}
-                          className={`w-full py-2.5 font-bold rounded-lg shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all bg-emerald-500 hover:bg-emerald-400 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed`}
+                          className={`${!submission ? 'flex-1 px-2' : 'w-full'} py-2.5 font-bold rounded-lg shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all bg-emerald-500 hover:bg-emerald-400 text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed truncate`}
                         >
                           {loading ? (
                             <img
@@ -877,7 +927,7 @@ export default function InstructorEvaluation({
                             ? "Saving..."
                             : submission
                               ? "Submit Evaluation"
-                              : "Save Manual Evaluation"}
+                              : "Save to DB"}
                         </button>
                       </div>
                     </>
